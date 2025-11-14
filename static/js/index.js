@@ -9,27 +9,21 @@ window.app = Vue.createApp({
         show: false,
         data: {}
       },
-
       walletsFormDialog: {
         show: false,
         data: {
           wallet: null,
-          pull_payments: null,
-          push_payments: null,
+          pull_payments: false,
+          push_payments: false,
           reconcile_name: null,
-          reconcile_mode: 'sat',
+          reconcile_mode: null,
           xero_bank_account_id: null,
-          tax_rate: 'sat',
-          fee_handling: null,
+          tax_rate: null,
+          fee_handling: false,
           notes: null
         }
       },
       walletsList: [],
-      taxList: [
-        {value: 'none', label: 'None (No VAT)'},
-        {value: '0', label: '0% (Zero Rated)'},
-        {value: '20', label: '20% (Standard VAT)'}
-      ],
       accountCodeList: [
         {
           value: '200',
@@ -142,14 +136,14 @@ window.app = Vue.createApp({
           {
             name: 'pull_payments',
             align: 'left',
-            label: 'Pull all historic payments',
+            label: 'Pull payments',
             field: 'pull_payments',
             sortable: true
           },
           {
             name: 'push_payments',
             align: 'left',
-            label: 'Auto-push payments',
+            label: 'Push payments',
             field: 'push_payments',
             sortable: true
           },
@@ -157,7 +151,7 @@ window.app = Vue.createApp({
             name: 'reconcile_name',
             align: 'left',
             label:
-              'Auto-reconcile payment type (ie bills, investment, taxes, etc)',
+              'Auto-reconcile',
             field: 'reconcile_name',
             sortable: true
           },
@@ -172,7 +166,7 @@ window.app = Vue.createApp({
             name: 'xero_bank_account_id',
             align: 'left',
             label:
-              'If you\u2019ll post directly into a specific Xero bank account.',
+              'Xero bank ID',
             field: 'xero_bank_account_id',
             sortable: true
           },
@@ -186,7 +180,7 @@ window.app = Vue.createApp({
           {
             name: 'fee_handling',
             align: 'left',
-            label: 'Whether to include LN fees as separate fee lines.',
+            label: 'Separate fees.',
             field: 'fee_handling',
             sortable: true
           },
@@ -280,13 +274,13 @@ window.app = Vue.createApp({
     async showNewWalletsForm() {
       this.walletsFormDialog.data = {
         wallet: null,
-        pull_payments: null,
-        push_payments: null,
+        pull_payments: false,
+        push_payments: false,
         reconcile_name: null,
-        reconcile_mode: 'sat',
+        reconcile_mode: null,
         xero_bank_account_id: null,
-        tax_rate: 'sat',
-        fee_handling: null,
+        tax_rate: null,
+        fee_handling: false,
         notes: null
       }
       this.walletsFormDialog.show = true
@@ -297,6 +291,8 @@ window.app = Vue.createApp({
     },
     async saveWallets() {
       try {
+        this.walletsFormDialog.data.reconcile_mode =
+          this.walletsFormDialog.data.reconcile_mode.value
         const data = {extra: {}, ...this.walletsFormDialog.data}
         const method = data.id ? 'PUT' : 'POST'
         const entry = data.id ? `/${data.id}` : ''
@@ -365,10 +361,35 @@ window.app = Vue.createApp({
       } catch (error) {
         LNbits.utils.notifyApiError(error)
       }
+    },
+        async connectToXero() {
+      try {
+        const redirectUri = window.location.origin + '/xero_sync/oauth/callback'
+        console.log(redirectUri)
+
+        const scopes =
+          'openid profile email accounting.settings accounting.transactions offline_access'
+        const state = this.g.user && this.g.user.id
+          ? this.g.user.id
+          : 'xero_sync'
+
+        const authUrl =
+          'https://login.xero.com/identity/connect/authorize' +
+          '?response_type=code' +
+          '&client_id=' + encodeURIComponent(this.settingsFormDialog.data.xero_client_id) +
+          '&redirect_uri=' + encodeURIComponent(redirectUri) +
+          '&scope=' + encodeURIComponent(scopes) +
+          '&state=' + encodeURIComponent(state)
+
+        window.open(authUrl, '_blank')
+      } catch (error) {
+        LNbits.utils.notifyApiError(error)
+      }
     }
   },
   async created() {
     this.fetchCurrencies()
     this.getWallets()
+    this.getSettings()
   }
 })

@@ -12,13 +12,21 @@
           <div class="col">
             <span class="text-h5">XeroSync</span>
             <q-btn
+              :disabled="!this.settingsFormDialog.data.xero_client_id || !this.settingsFormDialog.data.xero_client_secret"
+              @click="connectToXero()"
+              color="primary"
+              label="connect to Xero"
+              class="float-right"
+            >
+            </q-btn>
+            <q-btn
               @click="showSettingsDataForm()"
               v-if="true"
               unelevated
               split
               color="primary"
               icon="settings"
-              class="float-right"
+              class="float-right q-mr-sm"
             >
             </q-btn>
           </div>
@@ -60,7 +68,7 @@
               split
               color="primary"
             >
-              New Wallets
+              Connect new wallet
             </q-btn>
 
             <q-btn
@@ -159,7 +167,7 @@
       <q-input
         filled
         dense
-        v-model.trim="settingsFormDialog.data.zero_client_id"
+        v-model.trim="settingsFormDialog.data.xero_client_id"
         label="Xero Client ID"
         hint="  (optional)"
       ></q-input>
@@ -167,7 +175,7 @@
       <q-input
         filled
         dense
-        v-model.trim="settingsFormDialog.data.zero_client_secret"
+        v-model.trim="settingsFormDialog.data.xero_client_secret"
         label="Xero Client Secret"
         hint="  (optional)"
       ></q-input>
@@ -201,20 +209,20 @@
         v-model="walletsFormDialog.data.pull_payments"
         label="Pull all historic payments"
         hint="  "
-      ></q-checkbox>
+      ><q-tooltip>Will pull all historic payments from the selected wallet.</q-tooltip></q-checkbox>
 
       <q-checkbox
         v-model="walletsFormDialog.data.push_payments"
         label="Auto-push payments"
         hint="  "
-      ></q-checkbox>
+      ><q-tooltip>Will push all future payments from the selected wallet.</q-tooltip></q-checkbox>
 
       <q-input
         filled
         dense
         v-model.trim="walletsFormDialog.data.reconcile_name"
-        label="Auto-reconcile payment type (ie bills, investment, taxes, etc)"
-        hint="  (optional)"
+        label="Auto-reconcile"
+        hint="  (optional, payment type (ie bills, investment, taxes, etc)"
       ></q-input>
 
       <q-select
@@ -222,7 +230,7 @@
         dense
         v-model="walletsFormDialog.data.reconcile_mode"
         label="Reconcile mode"
-        hint="  (optional)"
+        hint="  (optional, set a default reconcile mode, leave blank to reconcile manually)"
         :options="accountCodeList"
       ></q-select>
 
@@ -230,22 +238,22 @@
         filled
         dense
         v-model.trim="walletsFormDialog.data.xero_bank_account_id"
-        label="If you’ll post directly into a specific Xero bank account."
-        hint="  (optional)"
+        label="Xero bank account ID"
+        hint="  (optional, if you’ll post directly into a specific Xero bank account.)"
       ></q-input>
 
-      <q-select
+      <q-input
         filled
         dense
         v-model="walletsFormDialog.data.tax_rate"
+        type="number"
         label="Tax rate"
         hint="  (optional)"
-        :options="taxList"
-      ></q-select>
+      ></q-input>
 
       <q-checkbox
         v-model="walletsFormDialog.data.fee_handling"
-        label="Whether to include LN fees as separate fee lines."
+        label="Include LN fees as separate fee lines."
         hint="   (optional)"
       ></q-checkbox>
 

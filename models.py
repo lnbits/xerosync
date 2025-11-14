@@ -12,7 +12,7 @@ class CreateWallets(BaseModel):
     reconcile_name: str | None
     reconcile_mode: str | None = "sat"
     xero_bank_account_id: str | None
-    tax_rate: str | None = "sat"
+    tax_rate: int | None = Field(0)
     fee_handling: bool | None
     last_synced: datetime | None
     status: str | None
@@ -28,7 +28,7 @@ class Wallets(BaseModel):
     reconcile_name: str | None
     reconcile_mode: str | None = "sat"
     xero_bank_account_id: str | None
-    tax_rate: str | None = "sat"
+    tax_rate: int | None = Field(0)
     fee_handling: bool | None
     last_synced: datetime | None
     status: str | None
@@ -75,8 +75,8 @@ class WalletsFilters(FilterModel):
 
 ############################ Settings #############################
 class ExtensionSettings(BaseModel):
-    zero_client_id: str | None
-    zero_client_secret: str | None
+    xero_client_id: str | None
+    xero_client_secret: str | None
 
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -87,3 +87,21 @@ class ExtensionSettings(BaseModel):
 
 class UserExtensionSettings(ExtensionSettings):
     id: str
+
+######################## Xero Connections ########################
+class CreateXeroConnection(BaseModel):
+    tenant_id: str
+    access_token: str
+    refresh_token: str
+    expires_at: datetime
+
+
+class XeroConnection(BaseModel):
+    id: str
+    user_id: str
+    tenant_id: str
+    access_token: str
+    refresh_token: str
+    expires_at: datetime
+    created_at: datetime | None = None
+    updated_at: datetime | None = None

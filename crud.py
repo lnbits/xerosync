@@ -1,5 +1,6 @@
 from lnbits.db import Database, Filters, Page
 from lnbits.helpers import urlsafe_short_hash
+from datetime import datetime, timezone
 
 from .models import (
     CreateWallets,
@@ -7,6 +8,8 @@ from .models import (
     UserExtensionSettings,  #
     Wallets,
     WalletsFilters,
+    XeroConnection,
+    CreateXeroConnection
 )
 
 db = Database("ext_xero_sync")
@@ -45,6 +48,15 @@ async def get_wallets_by_id(
         Wallets,
     )
 
+async def get_wallet_by_wallet_id(wallet_id: str) -> Wallets | None:
+    return await db.fetchone(
+        """
+        SELECT * FROM xero_sync.wallets
+        WHERE wallet = :wallet AND push_payments = TRUE
+        """,
+        {"wallet": wallet_id},
+        Wallets,
+    )
 
 async def get_wallets_ids_by_user(
     user_id: str,
@@ -118,3 +130,57 @@ async def update_extension_settings(user_id: str, data: ExtensionSettings) -> Ex
     settings = UserExtensionSettings(**data.dict(), id=user_id)
     await db.update("xero_sync.extension_settings", settings)
     return settings
+
+
+######################## Xero Connections ########################
+async def create_xero_connection(
+    user_id: str, data: CreateXeroConnection
+) -> XeroConnection:
+    now = datetime.now(timezone.utc)
+    conn = XeroConnection(
+        **data.dict(),
+        id=urlsafe_short_hash(),
+        user_id=user_id,
+        created_at=now,
+        updated_at=now,
+    )
+    await db.insert("xero_sync.connections", conn)
+    return conn
+
+
+async def update_xero_connection(conn: XeroConnection) -> XeroConnection:
+    conn.updated_at = datetime.now(timezone.utc)
+    await db.update("xero_sync.connections", conn)
+    return conn
+
+
+async def get_xero_connection(user_id: str) -> XeroConnection | None:
+    """
+    Fetch the latest Xero connection for this user, if any.
+    """
+    return await db.fetchone(
+        f"""
+        SELECT *
+        FROM xero_sync.connections
+        WHERE user_id = :user_id
+        ORDER BY updated_at DESC
+        LIMIT 1
+        """,
+        {"user_id": user_id},
+        XeroConnection,
+    )
+
+async def upsert_xero_connection(
+    user_id: str,
+    data: CreateXeroConnection,
+) -> XeroConnection:
+    """
+    Insert or update the Xero connection for this user.
+    """
+    existing = await get_xero_connection(user_id)
+
+    if existing:
+        updated = existing.copy(update=data.dict())
+        return await update_xero_connection(updated)
+
+    return await create_xero_connection(user_id, data)

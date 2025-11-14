@@ -18,7 +18,6 @@ from .crud import (
     update_wallets,
 )
 from .models import (
-    ClientDataFilters,
     CreateWallets,
     ExtensionSettings,  #
     Wallets,
@@ -30,7 +29,6 @@ from .services import (
 )
 
 wallets_filters = parse_filters(WalletsFilters)
-client_data_filters = parse_filters(ClientDataFilters)
 
 xero_sync_api_router = APIRouter()
 
