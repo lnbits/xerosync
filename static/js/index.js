@@ -4,7 +4,6 @@ window.app = Vue.createApp({
   delimiters: ['${', '}'],
   data: function () {
     return {
-      currencyOptions: ['sat'],
       settingsFormDialog: {
         show: false,
         data: {}
@@ -24,6 +23,12 @@ window.app = Vue.createApp({
         }
       },
       walletsList: [],
+      taxRateList: [
+  { value: null,        label: 'Use Xero default for this account' },
+  { value: 'standard',  label: 'Standard' },
+  { value: 'zero',      label: 'Zero-rated (0%)' },
+  { value: 'exempt',    label: 'Exempt / no tax' },
+],
       accountCodeList: [
         {
           value: '200',
@@ -291,8 +296,6 @@ window.app = Vue.createApp({
     },
     async saveWallets() {
       try {
-        this.walletsFormDialog.data.reconcile_mode =
-          this.walletsFormDialog.data.reconcile_mode.value
         const data = {extra: {}, ...this.walletsFormDialog.data}
         const method = data.id ? 'PUT' : 'POST'
         const entry = data.id ? `/${data.id}` : ''
@@ -354,14 +357,6 @@ window.app = Vue.createApp({
     dateFromNow(date) {
       return moment(date).fromNow()
     },
-    async fetchCurrencies() {
-      try {
-        const response = await LNbits.api.request('GET', '/api/v1/currencies')
-        this.currencyOptions = ['sat', ...response.data]
-      } catch (error) {
-        LNbits.utils.notifyApiError(error)
-      }
-    },
         async connectToXero() {
       try {
         const redirectUri = window.location.origin + '/xero_sync/oauth/callback'
@@ -388,7 +383,6 @@ window.app = Vue.createApp({
     }
   },
   async created() {
-    this.fetchCurrencies()
     this.getWallets()
     this.getSettings()
   }

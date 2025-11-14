@@ -13,6 +13,24 @@ from .models import ExtensionSettings
 XERO_TOKEN_URL = "https://identity.xero.com/connect/token"
 XERO_API_BASE = "https://api.xero.com/api.xro/2.0"
 
+async def fetch_xero_tax_rates_raw(access_token: str, tenant_id: str) -> list[dict]:
+    """
+    Low-level helper to fetch TaxRates from Xero.
+    Returns the raw Xero dicts.
+    """
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            f"{XERO_API_BASE}/TaxRates",
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "xero-tenant-id": tenant_id,
+                "Accept": "application/json",
+            },
+            timeout=10,
+        )
+    resp.raise_for_status()
+    body = resp.json()
+    return body.get("TaxRates", [])
 
 async def ensure_xero_access_token(conn, settings: ExtensionSettings) -> tuple[str, str]:
     """
@@ -91,6 +109,15 @@ async def payment_received_for_client_data(payment: Payment, conn, wallet_cfg) -
 
     description = payment.memo or f"LNbits payment {payment.payment_hash}"
     account_code = wallet_cfg.reconcile_mode or "200"  # Sales by default
+    tax_type: str | None = None
+    tr = getattr(wallet_cfg, "tax_rate", None)
+
+    if tr == "standard":
+        tax_type = settings.xero_tax_standard
+    elif tr == "zero":
+        tax_type = settings.xero_tax_zero
+    elif tr == "exempt":
+        tax_type = settings.xero_tax_exempt
 
     bank_tx = {
         "Type": "RECEIVE",
@@ -106,6 +133,7 @@ async def payment_received_for_client_data(payment: Payment, conn, wallet_cfg) -
                 "Quantity": 1,
                 "UnitAmount": amount_major,
                 "AccountCode": account_code,
+                "TaxType": tax_type,
             }
         ],
         "Reference": description,

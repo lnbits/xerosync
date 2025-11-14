@@ -10,7 +10,7 @@ class CreateWallets(BaseModel):
     pull_payments: bool
     push_payments: bool
     reconcile_name: str | None
-    reconcile_mode: str | None = "sat"
+    reconcile_mode: str | None
     xero_bank_account_id: str | None
     tax_rate: int | None = Field(0)
     fee_handling: bool | None
@@ -26,7 +26,7 @@ class Wallets(BaseModel):
     pull_payments: bool
     push_payments: bool
     reconcile_name: str | None
-    reconcile_mode: str | None = "sat"
+    reconcile_mode: str | None
     xero_bank_account_id: str | None
     tax_rate: int | None = Field(0)
     fee_handling: bool | None
@@ -77,7 +77,9 @@ class WalletsFilters(FilterModel):
 class ExtensionSettings(BaseModel):
     xero_client_id: str | None
     xero_client_secret: str | None
-
+    xero_tax_standard: str | None = None
+    xero_tax_zero: str | None = None
+    xero_tax_exempt: str | None = None
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     @classmethod

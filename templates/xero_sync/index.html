@@ -230,8 +230,10 @@
         dense
         v-model="walletsFormDialog.data.reconcile_mode"
         label="Reconcile mode"
-        hint="  (optional, set a default reconcile mode, leave blank to reconcile manually)"
+        hint="Set a default reconcile mode, leave blank to reconcile manually"
         :options="accountCodeList"
+          emit-value
+  map-options
       ></q-select>
 
       <q-input
@@ -239,17 +241,20 @@
         dense
         v-model.trim="walletsFormDialog.data.xero_bank_account_id"
         label="Xero bank account ID"
-        hint="  (optional, if you’ll post directly into a specific Xero bank account.)"
+        hint="from accounts in xero"
       ></q-input>
 
-      <q-input
-        filled
-        dense
-        v-model="walletsFormDialog.data.tax_rate"
-        type="number"
-        label="Tax rate"
-        hint="  (optional)"
-      ></q-input>
+<q-select
+  filled
+  dense
+  v-model="walletsFormDialog.data.tax_rate"
+  label="Tax treatment"
+  hint="Default tax/VAT per wallet (optional)"
+  :options="taxRateList"
+  emit-value
+  map-options
+></q-select>
+
 
       <q-checkbox
         v-model="walletsFormDialog.data.fee_handling"

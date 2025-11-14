@@ -12,6 +12,9 @@ async def m001_extension_settings(db):
             id TEXT NOT NULL,
             xero_client_id TEXT,
             xero_client_secret TEXT,
+            xero_tax_standard TEXT,
+            xero_tax_zero TEXT,
+            xero_tax_exempt TEXT,
             updated_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now}
         );
     """

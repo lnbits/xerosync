@@ -19,8 +19,6 @@ async def on_invoice_paid(payment: Payment) -> None:
     wallet_cfg = await get_wallet_by_wallet_id(payment.wallet_id)
     if not wallet_cfg:
         return
-    logger.debug(f"Xero Sync: Processing payment for wallet {payment.wallet_id}")
-    logger.debug(payment)
     conn = await get_xero_connection(wallet_cfg.user_id)
     if not conn:
         logger.warning("Xero Sync: no Xero connection for user, skipping")
