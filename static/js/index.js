@@ -6,19 +6,23 @@ window.app = Vue.createApp({
     return {
       settingsFormDialog: {
         show: false,
-        data: {}
+        data: {
+          xero_client_id: null,
+          xero_client_secret: null,
+          xero_tax_standard: null,
+          xero_tax_zero: null,
+          xero_tax_exempt: null
+        }
       },
       walletsFormDialog: {
         show: false,
         data: {
           wallet: null,
-          pull_payments: false,
           push_payments: false,
           reconcile_name: null,
           reconcile_mode: null,
           xero_bank_account_id: null,
           tax_rate: null,
-          fee_handling: false,
           notes: null
         }
       },
@@ -139,13 +143,6 @@ window.app = Vue.createApp({
             sortable: true
           },
           {
-            name: 'pull_payments',
-            align: 'left',
-            label: 'Pull payments',
-            field: 'pull_payments',
-            sortable: true
-          },
-          {
             name: 'push_payments',
             align: 'left',
             label: 'Push payments',
@@ -180,13 +177,6 @@ window.app = Vue.createApp({
             align: 'left',
             label: 'Tax rate',
             field: 'tax_rate',
-            sortable: true
-          },
-          {
-            name: 'fee_handling',
-            align: 'left',
-            label: 'Separate fees.',
-            field: 'fee_handling',
             sortable: true
           },
           {
@@ -265,7 +255,10 @@ window.app = Vue.createApp({
           '/xero_sync/api/v1/settings',
           null
         )
-        this.settingsFormDialog.data = data
+        this.settingsFormDialog.data = {
+          ...this.settingsFormDialog.data,
+          ...data
+        }
       } catch (error) {
         LNbits.utils.notifyApiError(error)
       }
@@ -280,12 +273,11 @@ window.app = Vue.createApp({
       this.walletsFormDialog.data = {
         wallet: null,
         pull_payments: false,
-        push_payments: false,
+        push_payments: true,
         reconcile_name: null,
         reconcile_mode: null,
         xero_bank_account_id: null,
         tax_rate: null,
-        fee_handling: false,
         notes: null
       }
       this.walletsFormDialog.show = true

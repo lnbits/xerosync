@@ -192,6 +192,30 @@
         hint="  (optional)"
       ></q-input>
 
+      <q-input
+        filled
+        dense
+        v-model.trim="settingsFormDialog.data.xero_tax_standard"
+        label="Tax code: Standard"
+        hint="Xero tax type code to use for standard-rated sales (e.g. OUTPUT2)"
+      ></q-input>
+
+      <q-input
+        filled
+        dense
+        v-model.trim="settingsFormDialog.data.xero_tax_zero"
+        label="Tax code: Zero-rated"
+        hint="Xero tax type code for zero-rated sales (optional)"
+      ></q-input>
+
+      <q-input
+        filled
+        dense
+        v-model.trim="settingsFormDialog.data.xero_tax_exempt"
+        label="Tax code: Exempt / no tax"
+        hint="Xero tax type code for exempt/no tax (optional)"
+      ></q-input>
+
       <div class="row q-mt-lg">
         <q-btn @click="updateSettings" unelevated color="primary" type="submit"
           >Update</q-btn
@@ -216,12 +240,6 @@
         :options="g.user.walletOptions"
         label="Wallet  * "
       ></q-select>
-
-      <q-checkbox
-        v-model="walletsFormDialog.data.pull_payments"
-        label="Pull all historic payments"
-        hint="  "
-      ><q-tooltip>Will pull all historic payments from the selected wallet.</q-tooltip></q-checkbox>
 
       <q-checkbox
         v-model="walletsFormDialog.data.push_payments"
@@ -267,12 +285,6 @@
   map-options
 ></q-select>
 
-
-      <q-checkbox
-        v-model="walletsFormDialog.data.fee_handling"
-        label="Include LN fees as separate fee lines."
-        hint="   (optional)"
-      ></q-checkbox>
 
       <q-input
         filled
