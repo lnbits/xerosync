@@ -1,17 +1,24 @@
-from lnbits.core.models import Payment
-from loguru import logger
 import httpx
 from datetime import datetime, timedelta, timezone
+from lnbits.core.crud import get_payments
+from lnbits.core.models import Payment
+from loguru import logger
 from .crud import (
     create_extension_settings,
     get_extension_settings,
+    create_synced_payment,
+    get_synced_payment,
+    get_synced_payment_hashes,
     update_extension_settings,
     update_xero_connection,
+    get_xero_connection,
+    update_wallets,
 )
-from .models import ExtensionSettings
+from .models import ExtensionSettings, Wallets
 
 XERO_TOKEN_URL = "https://identity.xero.com/connect/token"
 XERO_API_BASE = "https://api.xero.com/api.xro/2.0"
+EMPTY_ACCOUNT_ID = "00000000-0000-0000-0000-000000000000"
 
 async def fetch_xero_tax_rates_raw(access_token: str, tenant_id: str) -> list[dict]:
     """
@@ -72,40 +79,33 @@ async def ensure_xero_access_token(conn, settings: ExtensionSettings) -> tuple[s
     return conn.access_token, conn.tenant_id
 
 
-async def payment_received_for_client_data(payment: Payment, conn, wallet_cfg) -> bool:
-    # Load Xero app settings (client id/secret) for this user
-    settings = await get_settings(wallet_cfg.user_id)
+def _build_bank_transaction_payload(
+    payment: Payment, wallet_cfg: Wallets, settings: ExtensionSettings
+) -> tuple[dict | None, float | None, str | None, str | None]:
+    """
+    Prepare the Xero BankTransaction payload for a payment.
+    Returns (payload, amount_major, currency, skip_reason).
+    """
+    if payment.amount <= 0:
+        return None, None, None, "payment is not incoming"
 
-    access_token, tenant_id = await ensure_xero_access_token(conn, settings)
-
-    # --- Only push if fiat data exists ---
-    extra = payment.extra or {}  # <-- avoid NoneType.get crash
+    extra = payment.extra or {}
     fiat_currency = extra.get("wallet_fiat_currency")
     fiat_amount = extra.get("wallet_fiat_amount")
 
     if not fiat_currency or fiat_amount is None:
-        logger.debug(
-            f"Xero Sync: skipping payment {payment.payment_hash} "
-            f"because fiat data is missing (extra={extra})"
-        )
-        return True
-    if not wallet_cfg.xero_bank_account_id or wallet_cfg.xero_bank_account_id == "00000000-0000-0000-0000-000000000000":
-        logger.debug(
-            f"Xero Sync: skipping payment {payment.payment_hash} "
-            f"because wallet has no valid xero_bank_account_id"
-        )
-        return True
-    # Xero expects *major units* (not sats)
-    # LNbits already gives you the ready-to-post fiat amount here.
+        return None, None, None, "missing fiat currency/amount"
+
+    if (
+        not wallet_cfg.xero_bank_account_id
+        or wallet_cfg.xero_bank_account_id == EMPTY_ACCOUNT_ID
+    ):
+        return None, None, None, "wallet missing xero_bank_account_id"
+
     raw_amount = float(fiat_amount)
     amount_major = round(raw_amount, 2)
-
     if amount_major <= 0:
-        logger.debug(
-            f"Xero Sync: skipping payment {payment.payment_hash} "
-            f"because fiat amount too small after rounding ({raw_amount} -> {amount_major})"
-        )
-        return True
+        return None, None, None, "fiat amount too small after rounding"
 
     description = payment.memo or f"LNbits payment {payment.payment_hash}"
     account_code = wallet_cfg.reconcile_mode or "200"  # Sales by default
@@ -141,9 +141,50 @@ async def payment_received_for_client_data(payment: Payment, conn, wallet_cfg) -
         "Date": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S"),
     }
 
+    return bank_tx, amount_major, fiat_currency, None
+
+
+def _as_datetime(val) -> datetime:
+    if isinstance(val, datetime):
+        return val
+    try:
+        return datetime.fromtimestamp(val, tz=timezone.utc)
+    except Exception:
+        return datetime.now(timezone.utc)
+
+
+async def push_payment_to_xero(
+    payment: Payment,
+    conn,
+    wallet_cfg: Wallets,
+    settings: ExtensionSettings,
+    access_token: str,
+    tenant_id: str,
+    known_synced_hashes: set[str] | None = None,
+) -> dict:
+    """
+    Push a single payment to Xero, guarding against duplicates.
+    Returns a dict with status: ok | skip | error and optional message/id.
+    """
+    if known_synced_hashes is not None:
+        if payment.payment_hash in known_synced_hashes:
+            return {"status": "skip", "reason": "already synced"}
+    else:
+        existing = await get_synced_payment(payment.payment_hash)
+        if existing:
+            return {"status": "skip", "reason": "already synced"}
+
+    bank_tx, amount_major, fiat_currency, skip_reason = _build_bank_transaction_payload(
+        payment, wallet_cfg, settings
+    )
+    if skip_reason:
+        logger.debug(
+            f"Xero Sync: skipping payment {payment.payment_hash} ({skip_reason})"
+        )
+        return {"status": "skip", "reason": skip_reason}
+
     payload = {"BankTransactions": [bank_tx]}
 
-    # 2) POST to Xero
     async with httpx.AsyncClient() as client:
         resp = await client.post(
             f"{XERO_API_BASE}/BankTransactions",
@@ -162,13 +203,108 @@ async def payment_received_for_client_data(payment: Payment, conn, wallet_cfg) -
             f"Xero Sync: failed to create bank transaction for wallet "
             f"{payment.wallet_id} ({resp.status_code}): {resp.text}"
         )
-        return False
+        return {"status": "error", "reason": resp.text, "code": resp.status_code}
+
+    bank_tx_id = None
+    try:
+        body = resp.json()
+        bank_tx_id = (
+            body.get("BankTransactions", [{}])[0].get("BankTransactionID")
+            if isinstance(body, dict)
+            else None
+        )
+    except Exception:
+        bank_tx_id = None
+
+    await create_synced_payment(
+        wallet_cfg.user_id,
+        wallet_cfg.wallet,
+        payment.payment_hash,
+        bank_tx_id,
+        fiat_currency.upper() if fiat_currency else None,
+        amount_major,
+    )
+    if known_synced_hashes is not None:
+        known_synced_hashes.add(payment.payment_hash)
 
     logger.debug(
         f"Xero Sync: created Xero BankTransaction for payment {payment.payment_hash} "
-        f"{amount_major} {fiat_currency.upper()}"
+        f"{amount_major} {fiat_currency.upper() if fiat_currency else ''}"
     )
-    return True
+    return {"status": "ok", "bank_transaction_id": bank_tx_id}
+
+
+async def payment_received_for_client_data(payment: Payment, conn, wallet_cfg) -> bool:
+    # Load Xero app settings (client id/secret) for this user
+    settings = await get_settings(wallet_cfg.user_id)
+    access_token, tenant_id = await ensure_xero_access_token(conn, settings)
+
+    result = await push_payment_to_xero(
+        payment,
+        conn,
+        wallet_cfg,
+        settings,
+        access_token,
+        tenant_id,
+    )
+
+    if result["status"] == "ok":
+        wallet_cfg.last_synced = _as_datetime(getattr(payment, "time", None))
+        wallet_cfg.status = f"Auto-synced payment {payment.payment_hash}"
+        await update_wallets(wallet_cfg)
+        return True
+
+    if result["status"] == "skip":
+        return True
+
+    return False
+
+
+async def sync_wallet_payments(wallet_cfg: Wallets) -> dict:
+    """
+    Push all current successful incoming payments for a wallet to Xero.
+    """
+    conn = await get_xero_connection(wallet_cfg.user_id)
+    if not conn:
+        raise RuntimeError("Xero Sync: no Xero connection for this user.")
+
+    settings = await get_settings(wallet_cfg.user_id)
+    access_token, tenant_id = await ensure_xero_access_token(conn, settings)
+
+    payments = await get_payments(
+        wallet_id=wallet_cfg.wallet, incoming=True, complete=True
+    )
+    payments = sorted(payments, key=lambda p: _as_datetime(p.time))
+
+    synced_hashes = await get_synced_payment_hashes(wallet_cfg.wallet)
+    summary = {"pushed": 0, "skipped": 0, "failed": 0}
+
+    for pay in payments:
+        result = await push_payment_to_xero(
+            pay,
+            conn,
+            wallet_cfg,
+            settings,
+            access_token,
+            tenant_id,
+            known_synced_hashes=synced_hashes,
+        )
+
+        if result["status"] == "ok":
+            summary["pushed"] += 1
+        elif result["status"] == "skip":
+            summary["skipped"] += 1
+        else:
+            summary["failed"] += 1
+
+    now = datetime.now(timezone.utc)
+    wallet_cfg.last_synced = now
+    wallet_cfg.status = (
+        f"Synced {summary['pushed']} (skipped {summary['skipped']}, "
+        f"errors {summary['failed']}) at {now.isoformat()}"
+    )
+    await update_wallets(wallet_cfg)
+    return summary
 
 
 async def get_settings(user_id: str) -> ExtensionSettings:

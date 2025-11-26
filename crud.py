@@ -9,7 +9,8 @@ from .models import (
     Wallets,
     WalletsFilters,
     XeroConnection,
-    CreateXeroConnection
+    CreateXeroConnection,
+    SyncedPayment,
 )
 
 db = Database("ext_xero_sync")
@@ -88,6 +89,7 @@ async def get_wallets_paginated(
         values=values,
         filters=filters,
         model=Wallets,
+        table_name="xero_sync.wallets",
     )
 
 
@@ -184,3 +186,47 @@ async def upsert_xero_connection(
         return await update_xero_connection(updated)
 
     return await create_xero_connection(user_id, data)
+
+
+######################## Synced Payments ########################
+async def create_synced_payment(
+    user_id: str,
+    wallet_id: str,
+    payment_hash: str,
+    xero_bank_transaction_id: str | None,
+    currency: str | None,
+    amount: float | None,
+) -> SyncedPayment:
+    rec = SyncedPayment(
+        id=urlsafe_short_hash(),
+        user_id=user_id,
+        wallet_id=wallet_id,
+        payment_hash=payment_hash,
+        xero_bank_transaction_id=xero_bank_transaction_id,
+        currency=currency,
+        amount=amount,
+    )
+    await db.insert("xero_sync.synced_payments", rec)
+    return rec
+
+
+async def get_synced_payment(payment_hash: str) -> SyncedPayment | None:
+    return await db.fetchone(
+        """
+        SELECT * FROM xero_sync.synced_payments
+        WHERE payment_hash = :payment_hash
+        """,
+        {"payment_hash": payment_hash},
+        SyncedPayment,
+    )
+
+
+async def get_synced_payment_hashes(wallet_id: str) -> set[str]:
+    rows = await db.fetchall(
+        """
+        SELECT payment_hash FROM xero_sync.synced_payments
+        WHERE wallet_id = :wallet_id
+        """,
+        {"wallet_id": wallet_id},
+    )
+    return {row["payment_hash"] for row in rows}

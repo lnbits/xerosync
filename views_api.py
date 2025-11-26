@@ -26,6 +26,7 @@ from .models import (
 from .services import (
     get_settings,  #
     update_settings,  #
+    sync_wallet_payments,
 )
 
 wallets_filters = parse_filters(WalletsFilters)
@@ -114,6 +115,36 @@ async def api_delete_wallets(
         # await delete all client data associated with this wallets
         pass
     return SimpleStatus(success=True, message="Wallets Deleted")
+
+
+@xero_sync_api_router.post(
+    "/api/v1/wallets/{wallets_id}/push",
+    name="Push Wallet Payments",
+    summary="Push all current successful incoming payments to Xero.",
+    response_description="Push status summary.",
+    response_model=SimpleStatus,
+)
+async def api_push_wallets(
+    wallets_id: str,
+    user: User = Depends(check_user_exists),
+) -> SimpleStatus:
+    wallets = await get_wallets(user.id, wallets_id)
+    if not wallets:
+        raise HTTPException(HTTPStatus.NOT_FOUND, "Wallets not found.")
+    if wallets.user_id != user.id:
+        raise HTTPException(HTTPStatus.FORBIDDEN, "You do not own this wallets.")
+
+    try:
+        summary = await sync_wallet_payments(wallets)
+    except RuntimeError as exc:
+        raise HTTPException(HTTPStatus.BAD_REQUEST, str(exc))
+
+    message = (
+        f"Pushed {summary['pushed']} payment(s); "
+        f"skipped {summary['skipped']}; "
+        f"failed {summary['failed']}."
+    )
+    return SimpleStatus(success=True, message=message)
 
 
 ############################ Settings #############################

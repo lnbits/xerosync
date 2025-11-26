@@ -44,10 +44,11 @@ async def xero_oauth_callback(request: Request, code: str | None = None, state: 
         return HTMLResponse("Xero client id/secret not configured.", status_code=500)
 
     # 1) Exchange code for tokens
+    redirect_uri = str(request.url_for("xero_oauth_callback"))
     token_data = {
         "grant_type": "authorization_code",
         "code": code,
-        "redirect_uri": "http://localhost:5000/xero_sync/oauth/callback",
+        "redirect_uri": redirect_uri,
         "client_id": settings.xero_client_id,
         "client_secret": settings.xero_client_secret,
     }

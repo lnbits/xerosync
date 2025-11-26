@@ -345,6 +345,25 @@ window.app = Vue.createApp({
           }
         })
     },
+    async syncWallet(wallet) {
+      await LNbits.utils
+        .confirmDialog(
+          'Push all current successful incoming payments for this wallet to Xero?'
+        )
+        .onOk(async () => {
+          try {
+            const {data} = await LNbits.api.request(
+              'POST',
+              `/xero_sync/api/v1/wallets/${wallet.id}/push`,
+              null
+            )
+            LNbits.utils.notifySuccess(data.message || 'Wallet pushed to Xero')
+            await this.getWallets()
+          } catch (error) {
+            LNbits.utils.notifyApiError(error)
+          }
+        })
+    },
     async exportWalletsCSV() {
       await LNbits.utils.exportCSV(
         this.walletsTable.columns,

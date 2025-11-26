@@ -118,6 +118,18 @@
                   flat
                   dense
                   size="xs"
+                  @click="syncWallet(props.row)"
+                  icon="cloud_upload"
+                  color="primary"
+                  class="q-mr-sm"
+                >
+                  <q-tooltip>Push all payments to Xero</q-tooltip>
+                </q-btn>
+
+                <q-btn
+                  flat
+                  dense
+                  size="xs"
                   @click="deleteWallets(props.row.id)"
                   icon="cancel"
                   color="pink"

@@ -12,7 +12,7 @@ class CreateWallets(BaseModel):
     reconcile_name: str | None
     reconcile_mode: str | None
     xero_bank_account_id: str | None
-    tax_rate: int | None = Field(0)
+    tax_rate: str | None = None
     fee_handling: bool | None
     last_synced: datetime | None
     status: str | None
@@ -28,7 +28,7 @@ class Wallets(BaseModel):
     reconcile_name: str | None
     reconcile_mode: str | None
     xero_bank_account_id: str | None
-    tax_rate: int | None = Field(0)
+    tax_rate: str | None = None
     fee_handling: bool | None
     last_synced: datetime | None
     status: str | None
@@ -107,3 +107,15 @@ class XeroConnection(BaseModel):
     expires_at: datetime
     created_at: datetime | None = None
     updated_at: datetime | None = None
+
+
+######################## Synced Payments ########################
+class SyncedPayment(BaseModel):
+    id: str
+    user_id: str
+    wallet_id: str
+    payment_hash: str
+    xero_bank_transaction_id: str | None
+    currency: str | None
+    amount: float | None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
