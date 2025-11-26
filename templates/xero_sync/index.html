@@ -63,6 +63,7 @@
           </div>
           <div class="col-auto">
             <q-btn
+              :disabled="!this.settingsFormDialog.data.xero_client_id || !this.settingsFormDialog.data.xero_client_secret"
               @click="showNewWalletsForm()"
               unelevated
               split
@@ -244,7 +245,7 @@
       <q-checkbox
         v-model="walletsFormDialog.data.push_payments"
         label="Auto-push payments"
-        hint="  "
+        hint="Automatically push future payments from this wallet to Xero."
       ><q-tooltip>Will push all future payments from the selected wallet.</q-tooltip></q-checkbox>
 
       <q-input
@@ -260,19 +261,22 @@
         dense
         v-model="walletsFormDialog.data.reconcile_mode"
         label="Reconcile mode"
-        hint="Set a default reconcile mode, leave blank to reconcile manually"
+        hint="Choose a Xero revenue account. Leave blank to reconcile manually."
         :options="accountCodeList"
-          emit-value
-  map-options
+        emit-value
+        map-options
       ></q-select>
 
-      <q-input
+      <q-select
         filled
         dense
-        v-model.trim="walletsFormDialog.data.xero_bank_account_id"
-        label="Xero bank account ID"
-        hint="from accounts in xero"
-      ></q-input>
+        v-model="walletsFormDialog.data.xero_bank_account_id"
+        label="Xero bank account"
+        hint="Select the Xero bank account to deposit into."
+        :options="bankAccountList"
+        emit-value
+        map-options
+      ></q-select>
 
 <q-select
   filled

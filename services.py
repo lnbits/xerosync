@@ -20,6 +20,33 @@ XERO_TOKEN_URL = "https://identity.xero.com/connect/token"
 XERO_API_BASE = "https://api.xero.com/api.xro/2.0"
 EMPTY_ACCOUNT_ID = "00000000-0000-0000-0000-000000000000"
 
+# -- Xero API helpers ---------------------------------------------------------
+async def fetch_xero_accounts(access_token: str, tenant_id: str) -> list[dict]:
+    """
+    Fetch Xero Accounts (chart of accounts).
+    """
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            f"{XERO_API_BASE}/Accounts",
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "xero-tenant-id": tenant_id,
+                "Accept": "application/json",
+            },
+            timeout=10,
+        )
+    resp.raise_for_status()
+    body = resp.json()
+    return body.get("Accounts", [])
+
+
+async def fetch_xero_bank_accounts(access_token: str, tenant_id: str) -> list[dict]:
+    """
+    Fetch Xero Bank accounts (for deposit target selection).
+    """
+    accounts = await fetch_xero_accounts(access_token, tenant_id)
+    return [acc for acc in accounts if acc.get("Type") == "BANK"]
+
 async def fetch_xero_tax_rates_raw(access_token: str, tenant_id: str) -> list[dict]:
     """
     Low-level helper to fetch TaxRates from Xero.
@@ -277,18 +304,24 @@ async def sync_wallet_payments(wallet_cfg: Wallets) -> dict:
     payments = sorted(payments, key=lambda p: _as_datetime(p.time))
 
     synced_hashes = await get_synced_payment_hashes(wallet_cfg.wallet)
-    summary = {"pushed": 0, "skipped": 0, "failed": 0}
+    summary = {"pushed": 0, "skipped": 0, "failed": 0, "errors": []}
 
     for pay in payments:
-        result = await push_payment_to_xero(
-            pay,
-            conn,
-            wallet_cfg,
-            settings,
-            access_token,
-            tenant_id,
-            known_synced_hashes=synced_hashes,
-        )
+        try:
+            result = await push_payment_to_xero(
+                pay,
+                conn,
+                wallet_cfg,
+                settings,
+                access_token,
+                tenant_id,
+                known_synced_hashes=synced_hashes,
+            )
+        except Exception as exc:  # keep iterating on errors
+            logger.error(f"Xero Sync: failed to push payment {pay.payment_hash}: {exc}")
+            summary["failed"] += 1
+            summary["errors"].append(str(exc))
+            continue
 
         if result["status"] == "ok":
             summary["pushed"] += 1
@@ -296,6 +329,7 @@ async def sync_wallet_payments(wallet_cfg: Wallets) -> dict:
             summary["skipped"] += 1
         else:
             summary["failed"] += 1
+            summary["errors"].append(result.get("reason") or "unknown error")
 
     now = datetime.now(timezone.utc)
     wallet_cfg.last_synced = now

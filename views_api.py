@@ -16,6 +16,7 @@ from .crud import (
     get_wallets,
     get_wallets_paginated,
     update_wallets,
+    get_xero_connection,
 )
 from .models import (
     CreateWallets,
@@ -27,6 +28,9 @@ from .services import (
     get_settings,  #
     update_settings,  #
     sync_wallet_payments,
+    ensure_xero_access_token,
+    fetch_xero_accounts,
+    fetch_xero_bank_accounts,
 )
 
 wallets_filters = parse_filters(WalletsFilters)
@@ -144,7 +148,58 @@ async def api_push_wallets(
         f"skipped {summary['skipped']}; "
         f"failed {summary['failed']}."
     )
+    if summary.get("errors"):
+        message += f" Errors: {', '.join(summary['errors'])}"
     return SimpleStatus(success=True, message=message)
+
+
+############################ Xero Metadata #############################
+@xero_sync_api_router.get(
+    "/api/v1/accounts",
+    name="List Xero Accounts",
+    summary="Fetch chart of accounts from Xero for this user.",
+)
+async def api_get_accounts(user: User = Depends(check_user_exists)):
+    conn = await get_xero_connection(user.id)
+    if not conn:
+        raise HTTPException(
+            HTTPStatus.BAD_REQUEST, "No Xero connection configured for this user."
+        )
+    settings = await get_settings(user.id)
+    access_token, tenant_id = await ensure_xero_access_token(conn, settings)
+    accounts = await fetch_xero_accounts(access_token, tenant_id)
+    # Return minimal shape for selects
+    return [
+        {
+            "value": acc.get("Code") or acc.get("AccountID"),
+            "label": f"{acc.get('Code') or ''} – {acc.get('Name') or ''}".strip(" –"),
+            "type": acc.get("Type"),
+        }
+        for acc in accounts
+    ]
+
+
+@xero_sync_api_router.get(
+    "/api/v1/bank_accounts",
+    name="List Xero Bank Accounts",
+    summary="Fetch bank accounts from Xero for this user.",
+)
+async def api_get_bank_accounts(user: User = Depends(check_user_exists)):
+    conn = await get_xero_connection(user.id)
+    if not conn:
+        raise HTTPException(
+            HTTPStatus.BAD_REQUEST, "No Xero connection configured for this user."
+        )
+    settings = await get_settings(user.id)
+    access_token, tenant_id = await ensure_xero_access_token(conn, settings)
+    banks = await fetch_xero_bank_accounts(access_token, tenant_id)
+    return [
+        {
+            "value": acc.get("AccountID"),
+            "label": f"{acc.get('Name') or ''} ({acc.get('AccountNumber') or ''})".strip(),
+        }
+        for acc in banks
+    )
 
 
 ############################ Settings #############################
