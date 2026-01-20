@@ -1,7 +1,7 @@
 {% extends "base.html" %} {% from "macros.jinja" import window_vars with context
 %} {% block scripts %} {{ window_vars(user) }}
 
-<script src="{{ static_url_for('xero_sync/static', path='js/index.js') }}"></script>
+<script src="{{ static_url_for('xerosync/static', path='js/index.js') }}"></script>
 
 {% endblock %} {% block page %}
 <div class="row q-col-gutter-md">
@@ -162,9 +162,9 @@
       <q-card-section class="q-pa-none">
         <q-separator></q-separator>
         <q-list>
-          {% include "xero_sync/_api_docs.html" %}
+          {% include "xerosync/_api_docs.html" %}
           <q-separator></q-separator>
-          {% include "xero_sync/_xero_sync.html" %}
+          {% include "xerosync/_xerosync.html" %}
         </q-list>
       </q-card-section>
     </q-card>

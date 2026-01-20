@@ -5,7 +5,7 @@ async def m001_extension_settings(db):
     """
     Initial settings table.
     """
-    prefix = "" if getattr(db, "type", "").upper() == "SQLITE" else "xero_sync."
+    prefix = "" if getattr(db, "type", "").upper() == "SQLITE" else "xerosync."
 
     await db.execute(
         f"""
@@ -26,7 +26,7 @@ async def m002_wallets(db):
     """
     Initial wallets table.
     """
-    prefix = "" if getattr(db, "type", "").upper() == "SQLITE" else "xero_sync."
+    prefix = "" if getattr(db, "type", "").upper() == "SQLITE" else "xerosync."
     tbl = f"{prefix}wallets"
 
     await db.execute(
@@ -55,11 +55,11 @@ async def m003_wallet_indexes(db):
     """
     Add indexes to speed up lookups by wallet id when a payment arrives.
     """
-    prefix = "" if getattr(db, "type", "").upper() == "SQLITE" else "xero_sync."
+    prefix = "" if getattr(db, "type", "").upper() == "SQLITE" else "xerosync."
     tbl = f"{prefix}wallets"
     await db.execute(
         f"""
-        CREATE INDEX IF NOT EXISTS xero_sync_wallets_wallet_push_idx
+        CREATE INDEX IF NOT EXISTS xerosync_wallets_wallet_push_idx
         ON {tbl} (wallet, push_payments);
         """
     )
@@ -68,7 +68,7 @@ async def m004_xero_connections(db):
     """
     Table to store per-user Xero OAuth connection (tokens + tenant id).
     """
-    prefix = "" if getattr(db, "type", "").upper() == "SQLITE" else "xero_sync."
+    prefix = "" if getattr(db, "type", "").upper() == "SQLITE" else "xerosync."
     tbl = f"{prefix}connections"
 
     # Create table
@@ -90,7 +90,7 @@ async def m004_xero_connections(db):
     # Helpful index for fast lookups by user
     await db.execute(
         f"""
-        CREATE INDEX IF NOT EXISTS xero_sync_connections_user_idx
+        CREATE INDEX IF NOT EXISTS xerosync_connections_user_idx
         ON {tbl} (user_id);
         """
     )
@@ -100,7 +100,7 @@ async def m005_wallet_tax_rate_text(db):
     """
     Make wallet tax_rate text-based to store descriptive codes (standard/zero/exempt).
     """
-    prefix = "" if getattr(db, "type", "").upper() == "SQLITE" else "xero_sync."
+    prefix = "" if getattr(db, "type", "").upper() == "SQLITE" else "xerosync."
     tbl = f"{prefix}wallets"
     is_pg = getattr(db, "type", "").upper() == "POSTGRES"
 
@@ -119,7 +119,7 @@ async def m006_synced_payments(db):
     """
     Track which payments have been pushed to Xero to avoid duplicates.
     """
-    prefix = "" if getattr(db, "type", "").upper() == "SQLITE" else "xero_sync."
+    prefix = "" if getattr(db, "type", "").upper() == "SQLITE" else "xerosync."
     tbl = f"{prefix}synced_payments"
 
     await db.execute(
@@ -139,7 +139,7 @@ async def m006_synced_payments(db):
 
     await db.execute(
         f"""
-        CREATE INDEX IF NOT EXISTS xero_sync_synced_payments_wallet_idx
+        CREATE INDEX IF NOT EXISTS xerosync_synced_payments_wallet_idx
         ON {tbl} (wallet_id);
         """
     )

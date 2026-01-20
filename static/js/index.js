@@ -143,7 +143,7 @@ window.app = Vue.createApp({
 
         await LNbits.api.request(
           'PUT',
-          '/xero_sync/api/v1/settings',
+          '/xerosync/api/v1/settings',
           null,
           data
         )
@@ -156,7 +156,7 @@ window.app = Vue.createApp({
       try {
         const {data} = await LNbits.api.request(
           'GET',
-          '/xero_sync/api/v1/settings',
+          '/xerosync/api/v1/settings',
           null
         )
         this.settingsFormDialog.data = {
@@ -199,7 +199,7 @@ window.app = Vue.createApp({
         const entry = data.id ? `/${data.id}` : ''
         await LNbits.api.request(
           method,
-          '/xero_sync/api/v1/wallets' + entry,
+          '/xerosync/api/v1/wallets' + entry,
           null,
           data
         )
@@ -216,7 +216,7 @@ window.app = Vue.createApp({
         const params = LNbits.utils.prepareFilterQuery(this.walletsTable, props)
         const {data} = await LNbits.api.request(
           'GET',
-          `/xero_sync/api/v1/wallets/paginated?${params}`,
+          `/xerosync/api/v1/wallets/paginated?${params}`,
           null
         )
         this.walletsList = data.data
@@ -234,7 +234,7 @@ window.app = Vue.createApp({
           try {
             await LNbits.api.request(
               'DELETE',
-              '/xero_sync/api/v1/wallets/' + walletsId,
+              '/xerosync/api/v1/wallets/' + walletsId,
               null
             )
             await this.getWallets()
@@ -252,7 +252,7 @@ window.app = Vue.createApp({
           try {
             const {data} = await LNbits.api.request(
               'POST',
-              `/xero_sync/api/v1/wallets/${wallet.id}/push`,
+              `/xerosync/api/v1/wallets/${wallet.id}/push`,
               null
             )
             LNbits.utils.notifySuccess(data.message || 'Wallet pushed to Xero')
@@ -276,7 +276,7 @@ window.app = Vue.createApp({
     },
     async getXeroAccounts() {
       try {
-        const {data} = await LNbits.api.request('GET', '/xero_sync/api/v1/accounts')
+        const {data} = await LNbits.api.request('GET', '/xerosync/api/v1/accounts')
         this.accountCodeList = data
       } catch (error) {
         // User may not have connected to Xero yet; fail soft
@@ -288,7 +288,7 @@ window.app = Vue.createApp({
     },
     async getXeroBankAccounts() {
       try {
-        const {data} = await LNbits.api.request('GET', '/xero_sync/api/v1/bank_accounts')
+        const {data} = await LNbits.api.request('GET', '/xerosync/api/v1/bank_accounts')
         this.bankAccountList = data
       } catch (error) {
         LNbits.utils.notifyError(
@@ -304,7 +304,7 @@ window.app = Vue.createApp({
     },
         async connectToXero() {
       try {
-        window.open('/xero_sync/oauth/start', '_blank')
+        window.open('/xerosync/oauth/start', '_blank')
       } catch (error) {
         LNbits.utils.notifyApiError(error)
       }

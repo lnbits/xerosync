@@ -35,11 +35,11 @@ from .services import (
 
 wallets_filters = parse_filters(WalletsFilters)
 
-xero_sync_api_router = APIRouter()
+xerosync_api_router = APIRouter()
 
 
 ############################# Wallets #############################
-@xero_sync_api_router.post("/api/v1/wallets", status_code=HTTPStatus.CREATED)
+@xerosync_api_router.post("/api/v1/wallets", status_code=HTTPStatus.CREATED)
 async def api_create_wallets(
     data: CreateWallets,
     user: User = Depends(check_user_exists),
@@ -48,7 +48,7 @@ async def api_create_wallets(
     return wallets
 
 
-@xero_sync_api_router.put("/api/v1/wallets/{wallets_id}", status_code=HTTPStatus.CREATED)
+@xerosync_api_router.put("/api/v1/wallets/{wallets_id}", status_code=HTTPStatus.CREATED)
 async def api_update_wallets(
     wallets_id: str,
     data: CreateWallets,
@@ -63,7 +63,7 @@ async def api_update_wallets(
     return wallets
 
 
-@xero_sync_api_router.get(
+@xerosync_api_router.get(
     "/api/v1/wallets/paginated",
     name="Wallets List",
     summary="get paginated list of wallets",
@@ -82,7 +82,7 @@ async def api_get_wallets_paginated(
     )
 
 
-@xero_sync_api_router.get(
+@xerosync_api_router.get(
     "/api/v1/wallets/{wallets_id}",
     name="Get Wallets",
     summary="Get the wallets with this id.",
@@ -101,7 +101,7 @@ async def api_get_wallets(
     return wallets
 
 
-@xero_sync_api_router.delete(
+@xerosync_api_router.delete(
     "/api/v1/wallets/{wallets_id}",
     name="Delete Wallets",
     summary="Delete the wallets " "and optionally all its associated client_data.",
@@ -121,7 +121,7 @@ async def api_delete_wallets(
     return SimpleStatus(success=True, message="Wallets Deleted")
 
 
-@xero_sync_api_router.post(
+@xerosync_api_router.post(
     "/api/v1/wallets/{wallets_id}/push",
     name="Push Wallet Payments",
     summary="Push all current successful incoming payments to Xero.",
@@ -154,7 +154,7 @@ async def api_push_wallets(
 
 
 ############################ Xero Metadata #############################
-@xero_sync_api_router.get(
+@xerosync_api_router.get(
     "/api/v1/accounts",
     name="List Xero Accounts",
     summary="Fetch chart of accounts from Xero for this user.",
@@ -179,7 +179,7 @@ async def api_get_accounts(user: User = Depends(check_user_exists)):
     ]
 
 
-@xero_sync_api_router.get(
+@xerosync_api_router.get(
     "/api/v1/bank_accounts",
     name="List Xero Bank Accounts",
     summary="Fetch bank accounts from Xero for this user.",
@@ -203,7 +203,7 @@ async def api_get_bank_accounts(user: User = Depends(check_user_exists)):
 
 
 ############################ Settings #############################
-@xero_sync_api_router.get(
+@xerosync_api_router.get(
     "/api/v1/settings",
     name="Get Settings",
     summary="Get the settings for the current user.",
@@ -217,7 +217,7 @@ async def api_get_settings(
     return await get_settings(user_id)
 
 
-@xero_sync_api_router.put(
+@xerosync_api_router.put(
     "/api/v1/settings",
     name="Update Settings",
     summary="Update the settings for the current user.",

@@ -9,7 +9,7 @@ from .crud import get_wallet_by_wallet_id, get_xero_connection
 
 async def wait_for_paid_invoices():
     invoice_queue = asyncio.Queue()
-    register_invoice_listener(invoice_queue, "ext_xero_sync")
+    register_invoice_listener(invoice_queue, "ext_xerosync")
     while True:
         payment = await invoice_queue.get()
         await on_invoice_paid(payment)
@@ -26,4 +26,4 @@ async def on_invoice_paid(payment: Payment) -> None:
     try:
         await payment_received_for_client_data(payment, conn, wallet_cfg)
     except Exception as e:
-        logger.error(f"Error processing payment for xero_sync: {e}")
+        logger.error(f"Error processing payment for xerosync: {e}")

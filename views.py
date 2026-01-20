@@ -12,19 +12,19 @@ from datetime import datetime, timedelta, timezone
 from .crud import upsert_xero_connection, update_extension_settings
 from .models import CreateXeroConnection
 from .services import get_settings, XERO_TOKEN_URL, XERO_API_BASE
-xero_sync_generic_router = APIRouter()
+xerosync_generic_router = APIRouter()
 
 
-def xero_sync_renderer():
-    return template_renderer(["xero_sync/templates"])
+def xerosync_renderer():
+    return template_renderer(["xerosync/templates"])
 
 
-@xero_sync_generic_router.get("/", response_class=HTMLResponse)
+@xerosync_generic_router.get("/", response_class=HTMLResponse)
 async def index(req: Request, user: User = Depends(check_user_exists)):
-    return xero_sync_renderer().TemplateResponse("xero_sync/index.html", {"request": req, "user": user.json()})
+    return xerosync_renderer().TemplateResponse("xerosync/index.html", {"request": req, "user": user.json()})
 
 
-@xero_sync_generic_router.get("/oauth/start")
+@xerosync_generic_router.get("/oauth/start")
 async def xero_oauth_start(request: Request, user: User = Depends(check_user_exists)):
     settings = await get_settings(user.id)
     if not settings.xero_client_id or not settings.xero_client_secret:
@@ -52,7 +52,7 @@ async def xero_oauth_start(request: Request, user: User = Depends(check_user_exi
     return RedirectResponse(auth_url)
 
 
-@xero_sync_generic_router.get("/oauth/callback")
+@xerosync_generic_router.get("/oauth/callback")
 async def xero_oauth_callback(request: Request, code: str | None = None, state: str | None = None):
     """
     Xero redirects here after the user clicks 'Allow access'.

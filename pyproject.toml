@@ -1,5 +1,5 @@
 [project]
-name = "xero_sync"
+name = "xerosync"
 version = "0.0.4"
 requires-python = ">=3.10,<3.13"
 description = "<<LNbits -> Xero wallet sync>>"

@@ -1,9 +1,9 @@
 {
   "repos": [
     {
-      "id": "xero_sync",
+      "id": "xerosync",
       "organisation": "lnbits",
-      "repository": "xero_sync"
+      "repository": "xerosync"
     }
   ]
 }
