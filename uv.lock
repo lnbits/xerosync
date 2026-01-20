@@ -2146,7 +2146,7 @@ wheels = [
 ]
 
 [[package]]
-name = "xero-sync"
+name = "xerosync"
 version = "0.0.4"
 source = { virtual = "." }
 dependencies = [

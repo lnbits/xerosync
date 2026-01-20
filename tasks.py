@@ -4,8 +4,9 @@ from lnbits.core.models import Payment
 from lnbits.tasks import register_invoice_listener
 from loguru import logger
 
-from .services import payment_received_for_client_data
 from .crud import get_wallet_by_wallet_id, get_xero_connection
+from .services import payment_received_for_client_data
+
 
 async def wait_for_paid_invoices():
     invoice_queue = asyncio.Queue()

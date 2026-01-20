@@ -29,11 +29,11 @@ window.app = Vue.createApp({
       },
       walletsList: [],
       taxRateList: [
-  { value: null,        label: 'Use Xero default for this account' },
-  { value: 'standard',  label: 'Standard' },
-  { value: 'zero',      label: 'Zero-rated (0%)' },
-  { value: 'exempt',    label: 'Exempt / no tax' },
-],
+        {value: null, label: 'Use Xero default for this account'},
+        {value: 'standard', label: 'Standard'},
+        {value: 'zero', label: 'Zero-rated (0%)'},
+        {value: 'exempt', label: 'Exempt / no tax'}
+      ],
       taxTypeList: [],
       accountCodeList: [],
       bankAccountList: [],
@@ -58,8 +58,7 @@ window.app = Vue.createApp({
           {
             name: 'reconcile_name',
             align: 'left',
-            label:
-              'Auto-reconcile',
+            label: 'Auto-reconcile',
             field: 'reconcile_name',
             sortable: true
           },
@@ -73,8 +72,7 @@ window.app = Vue.createApp({
           {
             name: 'xero_bank_account_id',
             align: 'left',
-            label:
-              'Xero bank ID',
+            label: 'Xero bank ID',
             field: 'xero_bank_account_id',
             sortable: true
           },
@@ -143,12 +141,7 @@ window.app = Vue.createApp({
       try {
         const data = {...this.settingsFormDialog.data}
 
-        await LNbits.api.request(
-          'PUT',
-          '/xerosync/api/v1/settings',
-          null,
-          data
-        )
+        await LNbits.api.request('PUT', '/xerosync/api/v1/settings', null, data)
         this.settingsFormDialog.show = false
       } catch (error) {
         LNbits.utils.notifyApiError(error)
@@ -279,7 +272,10 @@ window.app = Vue.createApp({
     },
     async getXeroAccounts() {
       try {
-        const {data} = await LNbits.api.request('GET', '/xerosync/api/v1/accounts')
+        const {data} = await LNbits.api.request(
+          'GET',
+          '/xerosync/api/v1/accounts'
+        )
         this.accountCodeList = data
       } catch (error) {
         // User may not have connected to Xero yet; fail soft
@@ -291,7 +287,10 @@ window.app = Vue.createApp({
     },
     async getXeroBankAccounts() {
       try {
-        const {data} = await LNbits.api.request('GET', '/xerosync/api/v1/bank_accounts')
+        const {data} = await LNbits.api.request(
+          'GET',
+          '/xerosync/api/v1/bank_accounts'
+        )
         this.bankAccountList = data
       } catch (error) {
         LNbits.utils.notifyError(
@@ -302,7 +301,10 @@ window.app = Vue.createApp({
     },
     async getXeroTaxRates() {
       try {
-        const {data} = await LNbits.api.request('GET', '/xerosync/api/v1/tax_rates')
+        const {data} = await LNbits.api.request(
+          'GET',
+          '/xerosync/api/v1/tax_rates'
+        )
         this.taxTypeList = data
       } catch (error) {
         LNbits.utils.notifyError(
@@ -316,7 +318,7 @@ window.app = Vue.createApp({
     dateFromNow(date) {
       return moment(date).fromNow()
     },
-        async connectToXero() {
+    async connectToXero() {
       try {
         window.open('/xerosync/oauth/start', '_blank')
       } catch (error) {

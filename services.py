@@ -1,26 +1,30 @@
-import httpx
 from datetime import datetime, timedelta, timezone
+from typing import TypedDict
+
+import httpx
 from lnbits.core.crud import get_payments
 from lnbits.core.models import Payment
 from loguru import logger
+
 from .crud import (
     create_extension_settings,
-    get_extension_settings,
     create_synced_payment,
-    update_synced_payment,
     delete_synced_payment,
+    get_extension_settings,
     get_synced_payment,
     get_synced_payment_hashes,
-    update_extension_settings,
-    update_xero_connection,
     get_xero_connection,
+    update_extension_settings,
+    update_synced_payment,
     update_wallets,
+    update_xero_connection,
 )
 from .models import ExtensionSettings, Wallets
 
 XERO_TOKEN_URL = "https://identity.xero.com/connect/token"
 XERO_API_BASE = "https://api.xero.com/api.xro/2.0"
 EMPTY_ACCOUNT_ID = "00000000-0000-0000-0000-000000000000"
+
 
 # -- Xero API helpers ---------------------------------------------------------
 async def fetch_xero_accounts(access_token: str, tenant_id: str) -> list[dict]:
@@ -49,6 +53,7 @@ async def fetch_xero_bank_accounts(access_token: str, tenant_id: str) -> list[di
     accounts = await fetch_xero_accounts(access_token, tenant_id)
     return [acc for acc in accounts if acc.get("Type") == "BANK"]
 
+
 async def fetch_xero_tax_rates_raw(access_token: str, tenant_id: str) -> list[dict]:
     """
     Low-level helper to fetch TaxRates from Xero.
@@ -67,6 +72,7 @@ async def fetch_xero_tax_rates_raw(access_token: str, tenant_id: str) -> list[di
     resp.raise_for_status()
     body = resp.json()
     return body.get("TaxRates", [])
+
 
 async def ensure_xero_access_token(conn, settings: ExtensionSettings) -> tuple[str, str]:
     """
@@ -99,9 +105,7 @@ async def ensure_xero_access_token(conn, settings: ExtensionSettings) -> tuple[s
 
     conn.access_token = body["access_token"]
     conn.refresh_token = body["refresh_token"]
-    conn.expires_at = datetime.now(timezone.utc) + timedelta(
-        seconds=body["expires_in"]
-    )
+    conn.expires_at = datetime.now(timezone.utc) + timedelta(seconds=body["expires_in"])
 
     await update_xero_connection(conn)
 
@@ -125,10 +129,7 @@ def _build_bank_transaction_payload(
     if not fiat_currency or fiat_amount is None:
         return None, None, None, "missing fiat currency/amount"
 
-    if (
-        not wallet_cfg.xero_bank_account_id
-        or wallet_cfg.xero_bank_account_id == EMPTY_ACCOUNT_ID
-    ):
+    if not wallet_cfg.xero_bank_account_id or wallet_cfg.xero_bank_account_id == EMPTY_ACCOUNT_ID:
         return None, None, None, "wallet missing xero_bank_account_id"
 
     raw_amount = float(fiat_amount)
@@ -189,6 +190,68 @@ def _is_unique_violation(exc: Exception) -> bool:
     return "unique" in msg or "duplicate" in msg
 
 
+async def _should_skip_synced(payment: Payment, known_synced_hashes: set[str] | None) -> bool:
+    if known_synced_hashes is not None:
+        return payment.payment_hash in known_synced_hashes
+    existing = await get_synced_payment(payment.payment_hash)
+    return existing is not None
+
+
+async def _reserve_synced_payment(
+    payment: Payment,
+    wallet_cfg: Wallets,
+    fiat_currency: str | None,
+    amount_major: float | None,
+) -> bool:
+    try:
+        await create_synced_payment(
+            wallet_cfg.user_id,
+            wallet_cfg.wallet,
+            payment.payment_hash,
+            None,
+            fiat_currency.upper() if fiat_currency else None,
+            amount_major,
+        )
+        return True
+    except Exception as exc:
+        if _is_unique_violation(exc):
+            logger.debug(f"Xero Sync: payment {payment.payment_hash} already reserved, skipping")
+            return False
+        raise
+
+
+async def _post_bank_transaction(access_token: str, tenant_id: str, payload: dict) -> httpx.Response:
+    async with httpx.AsyncClient() as client:
+        return await client.post(
+            f"{XERO_API_BASE}/BankTransactions",
+            json=payload,
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "xero-tenant-id": tenant_id,
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+            },
+            timeout=10,
+        )
+
+
+def _parse_bank_transaction_id(resp: httpx.Response) -> str | None:
+    try:
+        body = resp.json()
+    except Exception:
+        return None
+    if not isinstance(body, dict):
+        return None
+    return body.get("BankTransactions", [{}])[0].get("BankTransactionID")
+
+
+class SyncSummary(TypedDict):
+    pushed: int
+    skipped: int
+    failed: int
+    errors: list[str]
+
+
 async def push_payment_to_xero(
     payment: Payment,
     conn,
@@ -202,39 +265,17 @@ async def push_payment_to_xero(
     Push a single payment to Xero, guarding against duplicates.
     Returns a dict with status: ok | skip | error and optional message/id.
     """
-    if known_synced_hashes is not None:
-        if payment.payment_hash in known_synced_hashes:
-            return {"status": "skip", "reason": "already synced"}
-    else:
-        existing = await get_synced_payment(payment.payment_hash)
-        if existing:
-            return {"status": "skip", "reason": "already synced"}
+    if await _should_skip_synced(payment, known_synced_hashes):
+        return {"status": "skip", "reason": "already synced"}
 
-    bank_tx, amount_major, fiat_currency, skip_reason = _build_bank_transaction_payload(
-        payment, wallet_cfg, settings
-    )
+    bank_tx, amount_major, fiat_currency, skip_reason = _build_bank_transaction_payload(payment, wallet_cfg, settings)
     if skip_reason:
-        logger.debug(
-            f"Xero Sync: skipping payment {payment.payment_hash} ({skip_reason})"
-        )
+        logger.debug(f"Xero Sync: skipping payment {payment.payment_hash} ({skip_reason})")
         return {"status": "skip", "reason": skip_reason}
 
-    try:
-        await create_synced_payment(
-            wallet_cfg.user_id,
-            wallet_cfg.wallet,
-            payment.payment_hash,
-            None,
-            fiat_currency.upper() if fiat_currency else None,
-            amount_major,
-        )
-    except Exception as exc:
-        if _is_unique_violation(exc):
-            logger.debug(
-                f"Xero Sync: payment {payment.payment_hash} already reserved, skipping"
-            )
-            return {"status": "skip", "reason": "already synced"}
-        raise
+    reserved = await _reserve_synced_payment(payment, wallet_cfg, fiat_currency, amount_major)
+    if not reserved:
+        return {"status": "skip", "reason": "already synced"}
 
     if known_synced_hashes is not None:
         known_synced_hashes.add(payment.payment_hash)
@@ -242,18 +283,7 @@ async def push_payment_to_xero(
     payload = {"BankTransactions": [bank_tx]}
 
     try:
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(
-                f"{XERO_API_BASE}/BankTransactions",
-                json=payload,
-                headers={
-                    "Authorization": f"Bearer {access_token}",
-                    "xero-tenant-id": tenant_id,
-                    "Accept": "application/json",
-                    "Content-Type": "application/json",
-                },
-                timeout=10,
-            )
+        resp = await _post_bank_transaction(access_token, tenant_id, payload)
     except Exception:
         await delete_synced_payment(payment.payment_hash)
         raise
@@ -266,16 +296,7 @@ async def push_payment_to_xero(
         )
         return {"status": "error", "reason": resp.text, "code": resp.status_code}
 
-    bank_tx_id = None
-    try:
-        body = resp.json()
-        bank_tx_id = (
-            body.get("BankTransactions", [{}])[0].get("BankTransactionID")
-            if isinstance(body, dict)
-            else None
-        )
-    except Exception:
-        bank_tx_id = None
+    bank_tx_id = _parse_bank_transaction_id(resp)
 
     await update_synced_payment(
         payment.payment_hash,
@@ -317,7 +338,7 @@ async def payment_received_for_client_data(payment: Payment, conn, wallet_cfg) -
     return False
 
 
-async def sync_wallet_payments(wallet_cfg: Wallets) -> dict:
+async def sync_wallet_payments(wallet_cfg: Wallets) -> SyncSummary:
     """
     Push all current successful incoming payments for a wallet to Xero.
     """
@@ -328,13 +349,11 @@ async def sync_wallet_payments(wallet_cfg: Wallets) -> dict:
     settings = await get_settings(wallet_cfg.user_id)
     access_token, tenant_id = await ensure_xero_access_token(conn, settings)
 
-    payments = await get_payments(
-        wallet_id=wallet_cfg.wallet, incoming=True, complete=True
-    )
+    payments = await get_payments(wallet_id=wallet_cfg.wallet, incoming=True, complete=True)
     payments = sorted(payments, key=lambda p: _as_datetime(p.time))
 
     synced_hashes = await get_synced_payment_hashes(wallet_cfg.wallet)
-    summary = {"pushed": 0, "skipped": 0, "failed": 0, "errors": []}
+    summary: SyncSummary = {"pushed": 0, "skipped": 0, "failed": 0, "errors": []}
 
     for pay in payments:
         try:

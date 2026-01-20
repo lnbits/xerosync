@@ -79,8 +79,8 @@ class WalletsFilters(FilterModel):
 
 ############################ Settings #############################
 class ExtensionSettings(BaseModel):
-    xero_client_id: str | None
-    xero_client_secret: str | None
+    xero_client_id: str | None = None
+    xero_client_secret: str | None = None
     xero_tax_standard: str | None = None
     xero_tax_zero: str | None = None
     xero_tax_exempt: str | None = None
@@ -93,6 +93,7 @@ class ExtensionSettings(BaseModel):
 
 class UserExtensionSettings(ExtensionSettings):
     id: str
+
 
 ######################## Xero Connections ########################
 class CreateXeroConnection(BaseModel):

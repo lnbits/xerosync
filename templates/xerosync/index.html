@@ -158,6 +158,20 @@
       <q-card-section>
         <h6 class="text-subtitle1 q-my-none">{{SITE_TITLE}} XeroSync</h6>
         <p>LNbits -> Xero wallet sync</p>
+        <div class="text-caption q-mt-sm">
+          <p class="q-mb-sm">
+            Wallets must have a fiat currency enabled for conversion.
+          </p>
+          <q-btn
+            unelevated
+            color="primary"
+            size="sm"
+            label="Open Xero Developer Portal"
+            href="https://developer.xero.com/myapps/"
+            target="_blank"
+            rel="noopener noreferrer"
+          ></q-btn>
+        </div>
       </q-card-section>
       <q-card-section class="q-pa-none">
         <q-separator></q-separator>
@@ -258,7 +272,10 @@
         v-model="walletsFormDialog.data.push_payments"
         label="Auto-push payments"
         hint="Automatically push future payments from this wallet to Xero."
-      ><q-tooltip>Will push all future payments from the selected wallet.</q-tooltip></q-checkbox>
+        ><q-tooltip
+          >Will push all future payments from the selected wallet.</q-tooltip
+        ></q-checkbox
+      >
 
       <q-checkbox
         v-model="walletsFormDialog.data.auto_reconcile"
@@ -296,17 +313,16 @@
         map-options
       ></q-select>
 
-<q-select
-  filled
-  dense
-  v-model="walletsFormDialog.data.tax_rate"
-  label="Tax treatment"
-  hint="Default tax/VAT per wallet (optional)"
-  :options="taxRateList"
-  emit-value
-  map-options
-></q-select>
-
+      <q-select
+        filled
+        dense
+        v-model="walletsFormDialog.data.tax_rate"
+        label="Tax treatment"
+        hint="Default tax/VAT per wallet (optional)"
+        :options="taxRateList"
+        emit-value
+        map-options
+      ></q-select>
 
       <q-input
         filled

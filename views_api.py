@@ -15,8 +15,8 @@ from .crud import (
     delete_wallets,
     get_wallets,
     get_wallets_paginated,
-    update_wallets,
     get_xero_connection,
+    update_wallets,
 )
 from .models import (
     CreateWallets,
@@ -25,13 +25,13 @@ from .models import (
     WalletsFilters,
 )
 from .services import (
-    get_settings,  #
-    update_settings,  #
-    sync_wallet_payments,
     ensure_xero_access_token,
     fetch_xero_accounts,
     fetch_xero_bank_accounts,
     fetch_xero_tax_rates_raw,
+    get_settings,  #
+    sync_wallet_payments,
+    update_settings,  #
 )
 
 wallets_filters = parse_filters(WalletsFilters)
@@ -142,12 +142,10 @@ async def api_push_wallets(
     try:
         summary = await sync_wallet_payments(wallets)
     except RuntimeError as exc:
-        raise HTTPException(HTTPStatus.BAD_REQUEST, str(exc))
+        raise HTTPException(HTTPStatus.BAD_REQUEST, str(exc)) from exc
 
     message = (
-        f"Pushed {summary['pushed']} payment(s); "
-        f"skipped {summary['skipped']}; "
-        f"failed {summary['failed']}."
+        f"Pushed {summary['pushed']} payment(s); " f"skipped {summary['skipped']}; " f"failed {summary['failed']}."
     )
     if summary.get("errors"):
         message += f" Errors: {', '.join(summary['errors'])}"
@@ -163,9 +161,7 @@ async def api_push_wallets(
 async def api_get_accounts(user: User = Depends(check_user_exists)):
     conn = await get_xero_connection(user.id)
     if not conn:
-        raise HTTPException(
-            HTTPStatus.BAD_REQUEST, "No Xero connection configured for this user."
-        )
+        raise HTTPException(HTTPStatus.BAD_REQUEST, "No Xero connection configured for this user.")
     settings = await get_settings(user.id)
     access_token, tenant_id = await ensure_xero_access_token(conn, settings)
     accounts = await fetch_xero_accounts(access_token, tenant_id)
@@ -175,7 +171,7 @@ async def api_get_accounts(user: User = Depends(check_user_exists)):
     return [
         {
             "value": acc.get("Code") or acc.get("AccountID"),
-            "label": f"{acc.get('Code') or ''} – {acc.get('Name') or ''}".strip(" –"),
+            "label": f"{acc.get('Code') or ''} - {acc.get('Name') or ''}".strip(" -"),
             "type": acc.get("Type"),
         }
         for acc in accounts
@@ -190,9 +186,7 @@ async def api_get_accounts(user: User = Depends(check_user_exists)):
 async def api_get_bank_accounts(user: User = Depends(check_user_exists)):
     conn = await get_xero_connection(user.id)
     if not conn:
-        raise HTTPException(
-            HTTPStatus.BAD_REQUEST, "No Xero connection configured for this user."
-        )
+        raise HTTPException(HTTPStatus.BAD_REQUEST, "No Xero connection configured for this user.")
     settings = await get_settings(user.id)
     access_token, tenant_id = await ensure_xero_access_token(conn, settings)
     banks = await fetch_xero_bank_accounts(access_token, tenant_id)
@@ -204,6 +198,7 @@ async def api_get_bank_accounts(user: User = Depends(check_user_exists)):
         for acc in banks
     ]
 
+
 @xerosync_api_router.get(
     "/api/v1/tax_rates",
     name="List Xero Tax Rates",
@@ -212,9 +207,7 @@ async def api_get_bank_accounts(user: User = Depends(check_user_exists)):
 async def api_get_tax_rates(user: User = Depends(check_user_exists)):
     conn = await get_xero_connection(user.id)
     if not conn:
-        raise HTTPException(
-            HTTPStatus.BAD_REQUEST, "No Xero connection configured for this user."
-        )
+        raise HTTPException(HTTPStatus.BAD_REQUEST, "No Xero connection configured for this user.")
     settings = await get_settings(user.id)
     access_token, tenant_id = await ensure_xero_access_token(conn, settings)
     tax_rates = await fetch_xero_tax_rates_raw(access_token, tenant_id)
@@ -235,7 +228,7 @@ async def api_get_tax_rates(user: User = Depends(check_user_exists)):
         options.append(
             {
                 "value": tax_type,
-                "label": f"{tax_type} – {name}{rate_suffix}".strip(" –"),
+                "label": f"{tax_type} - {name}{rate_suffix}".strip(" -"),
             }
         )
     return options

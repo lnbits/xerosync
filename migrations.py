@@ -51,6 +51,7 @@ async def m002_wallets(db):
     """
     )
 
+
 async def m003_wallet_indexes(db):
     """
     Add indexes to speed up lookups by wallet id when a payment arrives.
@@ -63,6 +64,7 @@ async def m003_wallet_indexes(db):
         ON {tbl} (wallet, push_payments);
         """
     )
+
 
 async def m004_xero_connections(db):
     """

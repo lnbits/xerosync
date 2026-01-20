@@ -1,16 +1,17 @@
+from datetime import datetime, timezone
+
 from lnbits.db import Database, Filters, Page
 from lnbits.helpers import urlsafe_short_hash
-from datetime import datetime, timezone
 
 from .models import (
     CreateWallets,
+    CreateXeroConnection,
     ExtensionSettings,  #
+    SyncedPayment,
     UserExtensionSettings,  #
     Wallets,
     WalletsFilters,
     XeroConnection,
-    CreateXeroConnection,
-    SyncedPayment,
 )
 
 db = Database("ext_xerosync")
@@ -49,6 +50,7 @@ async def get_wallets_by_id(
         Wallets,
     )
 
+
 async def get_wallet_by_wallet_id(wallet_id: str) -> Wallets | None:
     return await db.fetchone(
         """
@@ -58,6 +60,7 @@ async def get_wallet_by_wallet_id(wallet_id: str) -> Wallets | None:
         {"wallet": wallet_id},
         Wallets,
     )
+
 
 async def get_wallets_ids_by_user(
     user_id: str,
@@ -135,9 +138,7 @@ async def update_extension_settings(user_id: str, data: ExtensionSettings) -> Ex
 
 
 ######################## Xero Connections ########################
-async def create_xero_connection(
-    user_id: str, data: CreateXeroConnection
-) -> XeroConnection:
+async def create_xero_connection(user_id: str, data: CreateXeroConnection) -> XeroConnection:
     now = datetime.now(timezone.utc)
     conn = XeroConnection(
         **data.dict(),
@@ -161,7 +162,7 @@ async def get_xero_connection(user_id: str) -> XeroConnection | None:
     Fetch the latest Xero connection for this user, if any.
     """
     return await db.fetchone(
-        f"""
+        """
         SELECT *
         FROM xerosync.connections
         WHERE user_id = :user_id
@@ -171,6 +172,7 @@ async def get_xero_connection(user_id: str) -> XeroConnection | None:
         {"user_id": user_id},
         XeroConnection,
     )
+
 
 async def upsert_xero_connection(
     user_id: str,
@@ -255,7 +257,7 @@ async def delete_synced_payment(payment_hash: str) -> None:
 
 
 async def get_synced_payment_hashes(wallet_id: str) -> set[str]:
-    rows = await db.fetchall(
+    rows: list[dict] = await db.fetchall(
         """
         SELECT payment_hash FROM xerosync.synced_payments
         WHERE wallet_id = :wallet_id
