@@ -31,6 +31,7 @@ from .services import (
     ensure_xero_access_token,
     fetch_xero_accounts,
     fetch_xero_bank_accounts,
+    fetch_xero_tax_rates_raw,
 )
 
 wallets_filters = parse_filters(WalletsFilters)
@@ -168,6 +169,8 @@ async def api_get_accounts(user: User = Depends(check_user_exists)):
     settings = await get_settings(user.id)
     access_token, tenant_id = await ensure_xero_access_token(conn, settings)
     accounts = await fetch_xero_accounts(access_token, tenant_id)
+    allowed_types = {"REVENUE", "SALES", "OTHERINCOME"}
+    accounts = [acc for acc in accounts if acc.get("Type") in allowed_types]
     # Return minimal shape for selects
     return [
         {
@@ -200,6 +203,42 @@ async def api_get_bank_accounts(user: User = Depends(check_user_exists)):
         }
         for acc in banks
     ]
+
+@xerosync_api_router.get(
+    "/api/v1/tax_rates",
+    name="List Xero Tax Rates",
+    summary="Fetch tax rates from Xero for this user.",
+)
+async def api_get_tax_rates(user: User = Depends(check_user_exists)):
+    conn = await get_xero_connection(user.id)
+    if not conn:
+        raise HTTPException(
+            HTTPStatus.BAD_REQUEST, "No Xero connection configured for this user."
+        )
+    settings = await get_settings(user.id)
+    access_token, tenant_id = await ensure_xero_access_token(conn, settings)
+    tax_rates = await fetch_xero_tax_rates_raw(access_token, tenant_id)
+    options = []
+    for rate in tax_rates:
+        if rate.get("Status") == "DELETED":
+            continue
+        if not rate.get("CanApplyToRevenue", False):
+            continue
+        tax_type = rate.get("TaxType")
+        if not tax_type:
+            continue
+        name = rate.get("Name") or ""
+        display_rate = rate.get("DisplayTaxRate")
+        if display_rate is None:
+            display_rate = rate.get("EffectiveRate")
+        rate_suffix = f" ({display_rate}%)" if display_rate is not None else ""
+        options.append(
+            {
+                "value": tax_type,
+                "label": f"{tax_type} – {name}{rate_suffix}".strip(" –"),
+            }
+        )
+    return options
 
 
 ############################ Settings #############################

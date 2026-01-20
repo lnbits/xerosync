@@ -193,29 +193,41 @@
         hint="  (optional)"
       ></q-input>
 
-      <q-input
+      <q-select
         filled
         dense
-        v-model.trim="settingsFormDialog.data.xero_tax_standard"
+        v-model="settingsFormDialog.data.xero_tax_standard"
         label="Tax code: Standard"
         hint="Xero tax type code to use for standard-rated sales (e.g. OUTPUT2)"
-      ></q-input>
+        :options="taxTypeList"
+        emit-value
+        map-options
+        clearable
+      ></q-select>
 
-      <q-input
+      <q-select
         filled
         dense
-        v-model.trim="settingsFormDialog.data.xero_tax_zero"
+        v-model="settingsFormDialog.data.xero_tax_zero"
         label="Tax code: Zero-rated"
         hint="Xero tax type code for zero-rated sales (optional)"
-      ></q-input>
+        :options="taxTypeList"
+        emit-value
+        map-options
+        clearable
+      ></q-select>
 
-      <q-input
+      <q-select
         filled
         dense
-        v-model.trim="settingsFormDialog.data.xero_tax_exempt"
+        v-model="settingsFormDialog.data.xero_tax_exempt"
         label="Tax code: Exempt / no tax"
         hint="Xero tax type code for exempt/no tax (optional)"
-      ></q-input>
+        :options="taxTypeList"
+        emit-value
+        map-options
+        clearable
+      ></q-select>
 
       <div class="row q-mt-lg">
         <q-btn @click="updateSettings" unelevated color="primary" type="submit"
@@ -248,12 +260,18 @@
         hint="Automatically push future payments from this wallet to Xero."
       ><q-tooltip>Will push all future payments from the selected wallet.</q-tooltip></q-checkbox>
 
+      <q-checkbox
+        v-model="walletsFormDialog.data.auto_reconcile"
+        label="Auto-reconcile"
+        hint="Mark transactions as reconciled in Xero."
+      ></q-checkbox>
+
       <q-input
         filled
         dense
         v-model.trim="walletsFormDialog.data.reconcile_name"
-        label="Auto-reconcile"
-        hint="  (optional, payment type (ie bills, investment, taxes, etc)"
+        label="Contact name"
+        hint="(optional, name shown on the Xero transaction)"
       ></q-input>
 
       <q-select

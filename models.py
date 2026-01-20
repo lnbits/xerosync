@@ -9,6 +9,7 @@ class CreateWallets(BaseModel):
     wallet: str
     pull_payments: bool
     push_payments: bool
+    auto_reconcile: bool | None = None
     reconcile_name: str | None
     reconcile_mode: str | None
     xero_bank_account_id: str | None
@@ -25,6 +26,7 @@ class Wallets(BaseModel):
     wallet: str
     pull_payments: bool
     push_payments: bool
+    auto_reconcile: bool | None = None
     reconcile_name: str | None
     reconcile_mode: str | None
     xero_bank_account_id: str | None
@@ -43,6 +45,7 @@ class WalletsFilters(FilterModel):
         "wallet",
         "pull_payments",
         "push_payments",
+        "auto_reconcile",
         "reconcile_name",
         "reconcile_mode",
         "xero_bank_account_id",
@@ -57,6 +60,7 @@ class WalletsFilters(FilterModel):
         "wallet",
         "pull_payments",
         "push_payments",
+        "auto_reconcile",
         "reconcile_name",
         "reconcile_mode",
         "xero_bank_account_id",

@@ -19,6 +19,7 @@ window.app = Vue.createApp({
         data: {
           wallet: null,
           push_payments: true,
+          auto_reconcile: false,
           reconcile_name: null,
           reconcile_mode: null,
           xero_bank_account_id: null,
@@ -33,6 +34,7 @@ window.app = Vue.createApp({
   { value: 'zero',      label: 'Zero-rated (0%)' },
   { value: 'exempt',    label: 'Exempt / no tax' },
 ],
+      taxTypeList: [],
       accountCodeList: [],
       bankAccountList: [],
       walletsTable: {
@@ -168,7 +170,7 @@ window.app = Vue.createApp({
       }
     },
     async showSettingsDataForm() {
-      await this.getSettings()
+      await Promise.all([this.getSettings(), this.getXeroTaxRates()])
       this.settingsFormDialog.show = true
     },
 
@@ -178,6 +180,7 @@ window.app = Vue.createApp({
         wallet: null,
         pull_payments: false,
         push_payments: true,
+        auto_reconcile: false,
         reconcile_name: null,
         reconcile_mode: null,
         xero_bank_account_id: null,
@@ -295,6 +298,17 @@ window.app = Vue.createApp({
           'Could not load Xero bank accounts. Connect to Xero and try again.'
         )
         this.bankAccountList = []
+      }
+    },
+    async getXeroTaxRates() {
+      try {
+        const {data} = await LNbits.api.request('GET', '/xerosync/api/v1/tax_rates')
+        this.taxTypeList = data
+      } catch (error) {
+        LNbits.utils.notifyError(
+          'Could not load Xero tax rates. Connect to Xero and try again.'
+        )
+        this.taxTypeList = []
       }
     },
 

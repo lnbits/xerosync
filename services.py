@@ -169,6 +169,8 @@ def _build_bank_transaction_payload(
         "CurrencyCode": fiat_currency.upper(),
         "Date": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S"),
     }
+    if wallet_cfg.auto_reconcile:
+        bank_tx["IsReconciled"] = True
 
     return bank_tx, amount_major, fiat_currency, None
 

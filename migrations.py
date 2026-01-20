@@ -143,3 +143,17 @@ async def m006_synced_payments(db):
         ON {tbl} (wallet_id);
         """
     )
+
+
+async def m007_wallet_auto_reconcile(db):
+    """
+    Add auto_reconcile flag to wallet settings.
+    """
+    prefix = "" if getattr(db, "type", "").upper() == "SQLITE" else "xerosync."
+    tbl = f"{prefix}wallets"
+    await db.execute(
+        f"""
+        ALTER TABLE {tbl}
+        ADD COLUMN auto_reconcile BOOLEAN DEFAULT FALSE;
+        """
+    )
