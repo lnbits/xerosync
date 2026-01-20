@@ -154,6 +154,16 @@ async def api_push_wallets(
 
 ############################ Xero Metadata #############################
 @xerosync_api_router.get(
+    "/api/v1/connection",
+    name="Xero Connection Status",
+    summary="Check if a Xero connection exists for this user.",
+)
+async def api_get_connection_status(user: User = Depends(check_user_exists)):
+    conn = await get_xero_connection(user.id)
+    return {"connected": bool(conn)}
+
+
+@xerosync_api_router.get(
     "/api/v1/accounts",
     name="List Xero Accounts",
     summary="Fetch chart of accounts from Xero for this user.",
@@ -207,7 +217,7 @@ async def api_get_bank_accounts(user: User = Depends(check_user_exists)):
 async def api_get_tax_rates(user: User = Depends(check_user_exists)):
     conn = await get_xero_connection(user.id)
     if not conn:
-        raise HTTPException(HTTPStatus.BAD_REQUEST, "No Xero connection configured for this user.")
+        return []
     settings = await get_settings(user.id)
     access_token, tenant_id = await ensure_xero_access_token(conn, settings)
     tax_rates = await fetch_xero_tax_rates_raw(access_token, tenant_id)

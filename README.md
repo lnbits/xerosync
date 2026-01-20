@@ -7,8 +7,8 @@ Transactions so your bookkeeping stays in sync.
 
 1. Create a Xero app (Web app) in the Xero Developer Portal.
 2. Add your redirect URI: `https://<your-host>/xerosync/oauth/callback`
-3. Paste the Client ID and Client Secret into the extension settings.
-4. Connect your Xero account from the extension settings.
+3. Paste the Client ID and Client Secret in the Keys dialog.
+4. Connect your Xero account using the Connect to Xero button.
 5. Create a wallet mapping and choose:
    - Revenue account (Reconcile mode)
    - Bank account (deposit target)

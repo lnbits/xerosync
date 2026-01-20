@@ -14,6 +14,9 @@ window.app = Vue.createApp({
           xero_tax_exempt: null
         }
       },
+      keysFormDialog: {
+        show: false
+      },
       walletsFormDialog: {
         show: false,
         data: {
@@ -37,6 +40,7 @@ window.app = Vue.createApp({
       taxTypeList: [],
       accountCodeList: [],
       bankAccountList: [],
+      xeroConnected: false,
       walletsTable: {
         search: '',
         loading: false,
@@ -143,6 +147,7 @@ window.app = Vue.createApp({
 
         await LNbits.api.request('PUT', '/xerosync/api/v1/settings', null, data)
         this.settingsFormDialog.show = false
+        this.keysFormDialog.show = false
       } catch (error) {
         LNbits.utils.notifyApiError(error)
       }
@@ -163,8 +168,13 @@ window.app = Vue.createApp({
       }
     },
     async showSettingsDataForm() {
-      await Promise.all([this.getSettings(), this.getXeroTaxRates()])
+      await this.getSettings()
+      await this.getXeroTaxRates()
       this.settingsFormDialog.show = true
+    },
+    async showKeysDataForm() {
+      await this.getSettings()
+      this.keysFormDialog.show = true
     },
 
     //////////////// Wallets ////////////////////////
@@ -313,6 +323,17 @@ window.app = Vue.createApp({
         this.taxTypeList = []
       }
     },
+    async getXeroConnectionStatus() {
+      try {
+        const {data} = await LNbits.api.request(
+          'GET',
+          '/xerosync/api/v1/connection'
+        )
+        this.xeroConnected = !!data.connected
+      } catch (error) {
+        this.xeroConnected = false
+      }
+    },
 
     //////////////// Utils ////////////////////////
     dateFromNow(date) {
@@ -330,5 +351,6 @@ window.app = Vue.createApp({
     this.getWallets()
     this.getSettings()
     this.refreshXeroMetadata()
+    this.getXeroConnectionStatus()
   }
 })
