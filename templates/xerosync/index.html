@@ -156,8 +156,9 @@
   <div class="col-12 col-md-4 col-lg-5 q-gutter-y-md">
     <q-card>
       <q-card-section>
-        <h6 class="text-subtitle1 q-my-none">{{SITE_TITLE}} XeroSync</h6>
-        <p>LNbits -> Xero wallet sync</p>
+        <h6 class="text-subtitle1 q-my-none">
+          {{SITE_TITLE}} XeroSync (LNbits -> Xero wallet sync)
+        </h6>
         <div class="text-caption q-mt-sm">
           <p class="q-mb-sm">
             Wallets must have a fiat currency enabled for conversion.
@@ -171,6 +172,39 @@
             target="_blank"
             rel="noopener noreferrer"
           ></q-btn>
+        </div>
+        <div class="q-mt-md">
+          <div class="text-subtitle2 q-mb-xs">Quick start</div>
+          <ol class="text-body2 q-pl-md">
+            <li>Create a Xero app (Web app) in the Xero Developer Portal.</li>
+            <li>
+              Add your redirect URI:
+              <code>https://&lt;your-host&gt;/xerosync/oauth/callback</code>
+            </li>
+            <li>
+              Paste the Client ID and Client Secret into the extension settings.
+            </li>
+            <li>Connect your Xero account from the extension settings.</li>
+            <li>Create a wallet mapping and choose:</li>
+          </ol>
+          <ul class="text-body2 q-pl-lg q-mt-xs">
+            <li>Revenue account (Reconcile mode)</li>
+            <li>Bank account (deposit target)</li>
+            <li>Tax treatment (optional)</li>
+          </ul>
+          <div class="text-caption q-mt-sm">
+            Notes:
+            <ul class="q-pl-lg q-mt-xs">
+              <li>
+                Wallets must have a fiat currency enabled so LNbits can convert
+                amounts.
+              </li>
+              <li>
+                Transactions are created as Xero Bank Transactions (Receive
+                Money).
+              </li>
+            </ul>
+          </div>
         </div>
       </q-card-section>
       <q-card-section class="q-pa-none">
