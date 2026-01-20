@@ -1,5 +1,8 @@
+import secrets
+from urllib.parse import urlencode
+
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from lnbits.core.models import User
 from lnbits.decorators import check_user_exists
 from lnbits.helpers import template_renderer
@@ -21,6 +24,34 @@ async def index(req: Request, user: User = Depends(check_user_exists)):
     return xero_sync_renderer().TemplateResponse("xero_sync/index.html", {"request": req, "user": user.json()})
 
 
+@xero_sync_generic_router.get("/oauth/start")
+async def xero_oauth_start(request: Request, user: User = Depends(check_user_exists)):
+    settings = await get_settings(user.id)
+    if not settings.xero_client_id or not settings.xero_client_secret:
+        logger.error(f"Xero client id/secret not configured for user {user.id}")
+        return HTMLResponse("Xero client id/secret not configured.", status_code=400)
+
+    state = secrets.token_urlsafe(16)
+    request.session["xero_oauth_state"] = state
+    request.session["xero_oauth_user_id"] = user.id
+
+    redirect_uri = str(request.url_for("xero_oauth_callback"))
+    scopes = (
+        "openid profile email accounting.settings accounting.transactions offline_access"
+    )
+    query = urlencode(
+        {
+            "response_type": "code",
+            "client_id": settings.xero_client_id,
+            "redirect_uri": redirect_uri,
+            "scope": scopes,
+            "state": state,
+        }
+    )
+    auth_url = f"https://login.xero.com/identity/connect/authorize?{query}"
+    return RedirectResponse(auth_url)
+
+
 @xero_sync_generic_router.get("/oauth/callback")
 async def xero_oauth_callback(request: Request, code: str | None = None, state: str | None = None):
     """
@@ -34,7 +65,14 @@ async def xero_oauth_callback(request: Request, code: str | None = None, state: 
         logger.error(f"Xero OAuth callback missing code/state: code={code}, state={state}")
         return HTMLResponse("Missing code or state in Xero callback.", status_code=400)
 
-    user_id = state
+    stored_state = request.session.get("xero_oauth_state")
+    user_id = request.session.get("xero_oauth_user_id")
+    if not stored_state or not user_id or stored_state != state:
+        logger.error("Xero OAuth callback state mismatch or missing session.")
+        return HTMLResponse("Invalid or expired OAuth session.", status_code=400)
+
+    request.session.pop("xero_oauth_state", None)
+    request.session.pop("xero_oauth_user_id", None)
     logger.info(f"Xero OAuth callback for user {user_id}")
 
     # Get client id/secret from extension settings

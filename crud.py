@@ -221,6 +221,39 @@ async def get_synced_payment(payment_hash: str) -> SyncedPayment | None:
     )
 
 
+async def update_synced_payment(
+    payment_hash: str,
+    xero_bank_transaction_id: str | None,
+    currency: str | None,
+    amount: float | None,
+) -> None:
+    await db.execute(
+        """
+        UPDATE xero_sync.synced_payments
+        SET xero_bank_transaction_id = :xero_bank_transaction_id,
+            currency = :currency,
+            amount = :amount
+        WHERE payment_hash = :payment_hash
+        """,
+        {
+            "payment_hash": payment_hash,
+            "xero_bank_transaction_id": xero_bank_transaction_id,
+            "currency": currency,
+            "amount": amount,
+        },
+    )
+
+
+async def delete_synced_payment(payment_hash: str) -> None:
+    await db.execute(
+        """
+        DELETE FROM xero_sync.synced_payments
+        WHERE payment_hash = :payment_hash
+        """,
+        {"payment_hash": payment_hash},
+    )
+
+
 async def get_synced_payment_hashes(wallet_id: str) -> set[str]:
     rows = await db.fetchall(
         """

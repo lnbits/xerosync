@@ -304,24 +304,7 @@ window.app = Vue.createApp({
     },
         async connectToXero() {
       try {
-        const redirectUri = window.location.origin + '/xero_sync/oauth/callback'
-        console.log(redirectUri)
-
-        const scopes =
-          'openid profile email accounting.settings accounting.transactions offline_access'
-        const state = this.g.user && this.g.user.id
-          ? this.g.user.id
-          : 'xero_sync'
-
-        const authUrl =
-          'https://login.xero.com/identity/connect/authorize' +
-          '?response_type=code' +
-          '&client_id=' + encodeURIComponent(this.settingsFormDialog.data.xero_client_id) +
-          '&redirect_uri=' + encodeURIComponent(redirectUri) +
-          '&scope=' + encodeURIComponent(scopes) +
-          '&state=' + encodeURIComponent(state)
-
-        window.open(authUrl, '_blank')
+        window.open('/xero_sync/oauth/start', '_blank')
       } catch (error) {
         LNbits.utils.notifyApiError(error)
       }

@@ -199,7 +199,7 @@ async def api_get_bank_accounts(user: User = Depends(check_user_exists)):
             "label": f"{acc.get('Name') or ''} ({acc.get('AccountNumber') or ''})".strip(),
         }
         for acc in banks
-    )
+    ]
 
 
 ############################ Settings #############################

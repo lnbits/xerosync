@@ -7,6 +7,8 @@ from .crud import (
     create_extension_settings,
     get_extension_settings,
     create_synced_payment,
+    update_synced_payment,
+    delete_synced_payment,
     get_synced_payment,
     get_synced_payment_hashes,
     update_extension_settings,
@@ -180,6 +182,11 @@ def _as_datetime(val) -> datetime:
         return datetime.now(timezone.utc)
 
 
+def _is_unique_violation(exc: Exception) -> bool:
+    msg = str(exc).lower()
+    return "unique" in msg or "duplicate" in msg
+
+
 async def push_payment_to_xero(
     payment: Payment,
     conn,
@@ -210,22 +217,47 @@ async def push_payment_to_xero(
         )
         return {"status": "skip", "reason": skip_reason}
 
+    try:
+        await create_synced_payment(
+            wallet_cfg.user_id,
+            wallet_cfg.wallet,
+            payment.payment_hash,
+            None,
+            fiat_currency.upper() if fiat_currency else None,
+            amount_major,
+        )
+    except Exception as exc:
+        if _is_unique_violation(exc):
+            logger.debug(
+                f"Xero Sync: payment {payment.payment_hash} already reserved, skipping"
+            )
+            return {"status": "skip", "reason": "already synced"}
+        raise
+
+    if known_synced_hashes is not None:
+        known_synced_hashes.add(payment.payment_hash)
+
     payload = {"BankTransactions": [bank_tx]}
 
-    async with httpx.AsyncClient() as client:
-        resp = await client.post(
-            f"{XERO_API_BASE}/BankTransactions",
-            json=payload,
-            headers={
-                "Authorization": f"Bearer {access_token}",
-                "xero-tenant-id": tenant_id,
-                "Accept": "application/json",
-                "Content-Type": "application/json",
-            },
-            timeout=10,
-        )
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"{XERO_API_BASE}/BankTransactions",
+                json=payload,
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "xero-tenant-id": tenant_id,
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                },
+                timeout=10,
+            )
+    except Exception:
+        await delete_synced_payment(payment.payment_hash)
+        raise
 
     if resp.status_code >= 300:
+        await delete_synced_payment(payment.payment_hash)
         logger.error(
             f"Xero Sync: failed to create bank transaction for wallet "
             f"{payment.wallet_id} ({resp.status_code}): {resp.text}"
@@ -243,16 +275,12 @@ async def push_payment_to_xero(
     except Exception:
         bank_tx_id = None
 
-    await create_synced_payment(
-        wallet_cfg.user_id,
-        wallet_cfg.wallet,
+    await update_synced_payment(
         payment.payment_hash,
         bank_tx_id,
         fiat_currency.upper() if fiat_currency else None,
         amount_major,
     )
-    if known_synced_hashes is not None:
-        known_synced_hashes.add(payment.payment_hash)
 
     logger.debug(
         f"Xero Sync: created Xero BankTransaction for payment {payment.payment_hash} "
