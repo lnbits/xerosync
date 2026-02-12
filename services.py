@@ -188,7 +188,15 @@ def _as_datetime(val) -> datetime:
 
 def _payment_is_fiat(payment: Payment) -> bool:
     extra = payment.extra or {}
-    return bool(extra.get("paid_in_fiat"))
+    if payment.fiat_provider:
+        return True
+    if extra.get("paid_in_fiat"):
+        return True
+    if extra.get("fiat_method"):
+        return True
+    if extra.get("fiat_payment_request"):
+        return True
+    return False
 
 
 def _should_skip_by_payment_type(payment: Payment, wallet_cfg: Wallets) -> bool:
