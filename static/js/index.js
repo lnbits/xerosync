@@ -22,6 +22,8 @@ window.app = Vue.createApp({
         data: {
           wallet: null,
           push_payments: true,
+          push_bitcoin: true,
+          push_fiat: true,
           auto_reconcile: false,
           reconcile_name: null,
           reconcile_mode: null,
@@ -183,6 +185,8 @@ window.app = Vue.createApp({
         wallet: null,
         pull_payments: false,
         push_payments: true,
+        push_bitcoin: true,
+        push_fiat: true,
         auto_reconcile: false,
         reconcile_name: null,
         reconcile_mode: null,

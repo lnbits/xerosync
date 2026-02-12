@@ -9,6 +9,8 @@ class CreateWallets(BaseModel):
     wallet: str
     pull_payments: bool
     push_payments: bool
+    push_bitcoin: bool = True
+    push_fiat: bool = True
     auto_reconcile: bool | None = None
     reconcile_name: str | None
     reconcile_mode: str | None
@@ -26,6 +28,8 @@ class Wallets(BaseModel):
     wallet: str
     pull_payments: bool
     push_payments: bool
+    push_bitcoin: bool = True
+    push_fiat: bool = True
     auto_reconcile: bool | None = None
     reconcile_name: str | None
     reconcile_mode: str | None
@@ -45,6 +49,8 @@ class WalletsFilters(FilterModel):
         "wallet",
         "pull_payments",
         "push_payments",
+        "push_bitcoin",
+        "push_fiat",
         "auto_reconcile",
         "reconcile_name",
         "reconcile_mode",
@@ -60,6 +66,8 @@ class WalletsFilters(FilterModel):
         "wallet",
         "pull_payments",
         "push_payments",
+        "push_bitcoin",
+        "push_fiat",
         "auto_reconcile",
         "reconcile_name",
         "reconcile_mode",

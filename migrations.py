@@ -159,3 +159,37 @@ async def m007_wallet_auto_reconcile(db):
         ADD COLUMN auto_reconcile BOOLEAN DEFAULT FALSE;
         """
     )
+
+
+async def m008_wallet_bitcoin_only(db):
+    """
+    Add bitcoin_only flag to wallet settings.
+    """
+    prefix = "" if getattr(db, "type", "").upper() == "SQLITE" else "xerosync."
+    tbl = f"{prefix}wallets"
+    await db.execute(
+        f"""
+        ALTER TABLE {tbl}
+        ADD COLUMN bitcoin_only BOOLEAN DEFAULT FALSE;
+        """
+    )
+
+
+async def m009_wallet_payment_type_toggles(db):
+    """
+    Add push_bitcoin and push_fiat flags to wallet settings.
+    """
+    prefix = "" if getattr(db, "type", "").upper() == "SQLITE" else "xerosync."
+    tbl = f"{prefix}wallets"
+    await db.execute(
+        f"""
+        ALTER TABLE {tbl}
+        ADD COLUMN push_bitcoin BOOLEAN DEFAULT TRUE;
+        """
+    )
+    await db.execute(
+        f"""
+        ALTER TABLE {tbl}
+        ADD COLUMN push_fiat BOOLEAN DEFAULT TRUE;
+        """
+    )

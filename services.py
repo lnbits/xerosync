@@ -186,6 +186,28 @@ def _as_datetime(val) -> datetime:
         return datetime.now(timezone.utc)
 
 
+def _payment_is_fiat(payment: Payment) -> bool:
+    extra = payment.extra or {}
+    return bool(extra.get("paid_in_fiat"))
+
+
+def _should_skip_by_payment_type(payment: Payment, wallet_cfg: Wallets) -> bool:
+    raw_push_bitcoin = getattr(wallet_cfg, "push_bitcoin", True)
+    raw_push_fiat = getattr(wallet_cfg, "push_fiat", True)
+    push_bitcoin = True if raw_push_bitcoin is None else bool(raw_push_bitcoin)
+    push_fiat = True if raw_push_fiat is None else bool(raw_push_fiat)
+
+    if not push_bitcoin and not push_fiat:
+        return True
+
+    is_fiat = _payment_is_fiat(payment)
+    if is_fiat and not push_fiat:
+        return True
+    if not is_fiat and not push_bitcoin:
+        return True
+    return False
+
+
 def _is_unique_violation(exc: Exception) -> bool:
     msg = str(exc).lower()
     return "unique" in msg or "duplicate" in msg
@@ -268,6 +290,8 @@ async def push_payment_to_xero(
     """
     if await _should_skip_synced(payment, known_synced_hashes):
         return {"status": "skip", "reason": "already synced"}
+    if _should_skip_by_payment_type(payment, wallet_cfg):
+        return {"status": "skip", "reason": "payment type disabled"}
 
     bank_tx, amount_major, fiat_currency, skip_reason = _build_bank_transaction_payload(payment, wallet_cfg, settings)
     if skip_reason:

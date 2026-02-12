@@ -329,20 +329,37 @@
         label="Wallet  * "
       ></q-select>
 
-      <q-checkbox
-        v-model="walletsFormDialog.data.push_payments"
-        label="Auto-push payments"
-        hint="Automatically push future payments from this wallet to Xero."
-        ><q-tooltip
-          >Will push all future payments from the selected wallet.</q-tooltip
-        ></q-checkbox
-      >
+      <div class="row items-center q-gutter-md">
+        <q-checkbox
+          v-model="walletsFormDialog.data.push_payments"
+          label="Auto-push payments"
+          hint="Automatically push future payments from this wallet to Xero."
+        >
+          <q-tooltip>
+            Will push all future payments from the selected wallet.
+          </q-tooltip>
+        </q-checkbox>
 
-      <q-checkbox
-        v-model="walletsFormDialog.data.auto_reconcile"
-        label="Auto-reconcile"
-        hint="Mark transactions as reconciled in Xero."
-      ></q-checkbox>
+        <q-checkbox
+          v-model="walletsFormDialog.data.auto_reconcile"
+          label="Auto-reconcile"
+          hint="Mark transactions as reconciled in Xero."
+        ></q-checkbox>
+      </div>
+
+      <div class="row items-center q-gutter-md">
+        <q-checkbox
+          v-model="walletsFormDialog.data.push_bitcoin"
+          label="Push Bitcoin payments"
+          hint="Push payments that were settled in Bitcoin."
+        ></q-checkbox>
+
+        <q-checkbox
+          v-model="walletsFormDialog.data.push_fiat"
+          label="Push fiat payments"
+          hint="Push payments that were settled in fiat."
+        ></q-checkbox>
+      </div>
 
       <q-input
         filled
