@@ -256,6 +256,16 @@ async def delete_synced_payment(payment_hash: str) -> None:
     )
 
 
+async def delete_synced_payments_by_wallet(wallet_id: str) -> None:
+    await db.execute(
+        """
+        DELETE FROM xerosync.synced_payments
+        WHERE wallet_id = :wallet_id
+        """,
+        {"wallet_id": wallet_id},
+    )
+
+
 async def get_synced_payment_hashes(wallet_id: str) -> set[str]:
     rows: list[dict] = await db.fetchall(
         """

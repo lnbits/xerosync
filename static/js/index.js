@@ -240,7 +240,7 @@ window.app = Vue.createApp({
           try {
             await LNbits.api.request(
               'DELETE',
-              '/xerosync/api/v1/wallets/' + walletsId,
+              '/xerosync/api/v1/wallets/' + walletsId + '?clear_client_data=true',
               null
             )
             await this.getWallets()

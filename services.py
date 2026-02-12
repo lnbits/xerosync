@@ -2,8 +2,9 @@ from datetime import datetime, timedelta, timezone
 from typing import TypedDict
 
 import httpx
-from lnbits.core.crud import get_payments
+from lnbits.core.crud import get_payments_paginated
 from lnbits.core.models import Payment
+from lnbits.db import Filters
 from loguru import logger
 
 from .crud import (
@@ -349,36 +350,50 @@ async def sync_wallet_payments(wallet_cfg: Wallets) -> SyncSummary:
     settings = await get_settings(wallet_cfg.user_id)
     access_token, tenant_id = await ensure_xero_access_token(conn, settings)
 
-    payments = await get_payments(wallet_id=wallet_cfg.wallet, incoming=True, complete=True)
-    payments = sorted(payments, key=lambda p: _as_datetime(p.time))
-
     synced_hashes = await get_synced_payment_hashes(wallet_cfg.wallet)
     summary: SyncSummary = {"pushed": 0, "skipped": 0, "failed": 0, "errors": []}
 
-    for pay in payments:
-        try:
-            result = await push_payment_to_xero(
-                pay,
-                conn,
-                wallet_cfg,
-                settings,
-                access_token,
-                tenant_id,
-                known_synced_hashes=synced_hashes,
-            )
-        except Exception as exc:  # keep iterating on errors
-            logger.error(f"Xero Sync: failed to push payment {pay.payment_hash}: {exc}")
-            summary["failed"] += 1
-            summary["errors"].append(str(exc))
-            continue
+    page_size = 1000
+    offset = 0
+    while True:
+        filters = Filters(limit=page_size, offset=offset, sortby="time", direction="asc")
+        page = await get_payments_paginated(
+            wallet_id=wallet_cfg.wallet,
+            incoming=True,
+            complete=True,
+            filters=filters,
+        )
+        if not page.data:
+            break
 
-        if result["status"] == "ok":
-            summary["pushed"] += 1
-        elif result["status"] == "skip":
-            summary["skipped"] += 1
-        else:
-            summary["failed"] += 1
-            summary["errors"].append(result.get("reason") or "unknown error")
+        for pay in page.data:
+            try:
+                result = await push_payment_to_xero(
+                    pay,
+                    conn,
+                    wallet_cfg,
+                    settings,
+                    access_token,
+                    tenant_id,
+                    known_synced_hashes=synced_hashes,
+                )
+            except Exception as exc:  # keep iterating on errors
+                logger.error(f"Xero Sync: failed to push payment {pay.payment_hash}: {exc}")
+                summary["failed"] += 1
+                summary["errors"].append(str(exc))
+                continue
+
+            if result["status"] == "ok":
+                summary["pushed"] += 1
+            elif result["status"] == "skip":
+                summary["skipped"] += 1
+            else:
+                summary["failed"] += 1
+                summary["errors"].append(result.get("reason") or "unknown error")
+
+        offset += page_size
+        if offset >= page.total:
+            break
 
     now = datetime.now(timezone.utc)
     wallet_cfg.last_synced = now

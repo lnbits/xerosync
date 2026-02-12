@@ -13,6 +13,7 @@ from lnbits.helpers import generate_filter_params_openapi
 from .crud import (
     create_wallets,
     delete_wallets,
+    delete_synced_payments_by_wallet,
     get_wallets,
     get_wallets_paginated,
     get_xero_connection,
@@ -114,11 +115,12 @@ async def api_delete_wallets(
     clear_client_data: bool | None = False,
     user: User = Depends(check_user_exists),
 ) -> SimpleStatus:
-
+    wallets = await get_wallets(user.id, wallets_id)
+    if not wallets:
+        raise HTTPException(HTTPStatus.NOT_FOUND, "Wallets not found.")
     await delete_wallets(user.id, wallets_id)
     if clear_client_data is True:
-        # await delete all client data associated with this wallets
-        pass
+        await delete_synced_payments_by_wallet(wallets.wallet)
     return SimpleStatus(success=True, message="Wallets Deleted")
 
 
