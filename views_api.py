@@ -2,9 +2,11 @@ from http import HTTPStatus
 
 from fastapi import APIRouter, Depends
 from fastapi.exceptions import HTTPException
+
 from lnbits.core.models import SimpleStatus, User
 from lnbits.db import Filters, Page
 from lnbits.decorators import (
+    check_account_id_exists,
     check_user_exists,
     parse_filters,
 )
@@ -12,8 +14,8 @@ from lnbits.helpers import generate_filter_params_openapi
 
 from .crud import (
     create_wallets,
-    delete_wallets,
     delete_synced_payments_by_wallet,
+    delete_wallets,
     get_wallets,
     get_wallets_paginated,
     get_xero_connection,
@@ -44,7 +46,7 @@ xerosync_api_router = APIRouter()
 @xerosync_api_router.post("/api/v1/wallets", status_code=HTTPStatus.CREATED)
 async def api_create_wallets(
     data: CreateWallets,
-    user: User = Depends(check_user_exists),
+    user: User = Depends(check_account_id_exists),
 ) -> Wallets:
     wallets = await create_wallets(user.id, data)
     return wallets
@@ -54,7 +56,7 @@ async def api_create_wallets(
 async def api_update_wallets(
     wallets_id: str,
     data: CreateWallets,
-    user: User = Depends(check_user_exists),
+    user: User = Depends(check_account_id_exists),
 ) -> Wallets:
     wallets = await get_wallets(user.id, wallets_id)
     if not wallets:
@@ -74,10 +76,9 @@ async def api_update_wallets(
     response_model=Page[Wallets],
 )
 async def api_get_wallets_paginated(
-    user: User = Depends(check_user_exists),
+    user: User = Depends(check_account_id_exists),
     filters: Filters = Depends(wallets_filters),
 ) -> Page[Wallets]:
-
     return await get_wallets_paginated(
         user_id=user.id,
         filters=filters,
@@ -93,9 +94,8 @@ async def api_get_wallets_paginated(
 )
 async def api_get_wallets(
     wallets_id: str,
-    user: User = Depends(check_user_exists),
+    user: User = Depends(check_account_id_exists),
 ) -> Wallets:
-
     wallets = await get_wallets(user.id, wallets_id)
     if not wallets:
         raise HTTPException(HTTPStatus.NOT_FOUND, "Wallets not found.")
@@ -106,14 +106,14 @@ async def api_get_wallets(
 @xerosync_api_router.delete(
     "/api/v1/wallets/{wallets_id}",
     name="Delete Wallets",
-    summary="Delete the wallets " "and optionally all its associated client_data.",
+    summary="Delete the wallets and optionally all its associated client_data.",
     response_description="The status of the deletion.",
     response_model=SimpleStatus,
 )
 async def api_delete_wallets(
     wallets_id: str,
     clear_client_data: bool | None = False,
-    user: User = Depends(check_user_exists),
+    user: User = Depends(check_account_id_exists),
 ) -> SimpleStatus:
     wallets = await get_wallets(user.id, wallets_id)
     if not wallets:
@@ -133,7 +133,7 @@ async def api_delete_wallets(
 )
 async def api_push_wallets(
     wallets_id: str,
-    user: User = Depends(check_user_exists),
+    user: User = Depends(check_account_id_exists),
 ) -> SimpleStatus:
     wallets = await get_wallets(user.id, wallets_id)
     if not wallets:
@@ -147,7 +147,9 @@ async def api_push_wallets(
         raise HTTPException(HTTPStatus.BAD_REQUEST, str(exc)) from exc
 
     message = (
-        f"Pushed {summary['pushed']} payment(s); " f"skipped {summary['skipped']}; " f"failed {summary['failed']}."
+        f"Pushed {summary['pushed']} payment(s); "
+        f"skipped {summary['skipped']}; "
+        f"failed {summary['failed']}."
     )
     if summary.get("errors"):
         message += f" Errors: {', '.join(summary['errors'])}"
@@ -160,7 +162,7 @@ async def api_push_wallets(
     name="Xero Connection Status",
     summary="Check if a Xero connection exists for this user.",
 )
-async def api_get_connection_status(user: User = Depends(check_user_exists)):
+async def api_get_connection_status(user: User = Depends(check_account_id_exists)):
     conn = await get_xero_connection(user.id)
     return {"connected": bool(conn)}
 
@@ -170,10 +172,12 @@ async def api_get_connection_status(user: User = Depends(check_user_exists)):
     name="List Xero Accounts",
     summary="Fetch chart of accounts from Xero for this user.",
 )
-async def api_get_accounts(user: User = Depends(check_user_exists)):
+async def api_get_accounts(user: User = Depends(check_account_id_exists)):
     conn = await get_xero_connection(user.id)
     if not conn:
-        raise HTTPException(HTTPStatus.BAD_REQUEST, "No Xero connection configured for this user.")
+        raise HTTPException(
+            HTTPStatus.BAD_REQUEST, "No Xero connection configured for this user."
+        )
     settings = await get_settings(user.id)
     access_token, tenant_id = await ensure_xero_access_token(conn, settings)
     accounts = await fetch_xero_accounts(access_token, tenant_id)
@@ -195,10 +199,12 @@ async def api_get_accounts(user: User = Depends(check_user_exists)):
     name="List Xero Bank Accounts",
     summary="Fetch bank accounts from Xero for this user.",
 )
-async def api_get_bank_accounts(user: User = Depends(check_user_exists)):
+async def api_get_bank_accounts(user: User = Depends(check_account_id_exists)):
     conn = await get_xero_connection(user.id)
     if not conn:
-        raise HTTPException(HTTPStatus.BAD_REQUEST, "No Xero connection configured for this user.")
+        raise HTTPException(
+            HTTPStatus.BAD_REQUEST, "No Xero connection configured for this user."
+        )
     settings = await get_settings(user.id)
     access_token, tenant_id = await ensure_xero_access_token(conn, settings)
     banks = await fetch_xero_bank_accounts(access_token, tenant_id)
@@ -216,7 +222,7 @@ async def api_get_bank_accounts(user: User = Depends(check_user_exists)):
     name="List Xero Tax Rates",
     summary="Fetch tax rates from Xero for this user.",
 )
-async def api_get_tax_rates(user: User = Depends(check_user_exists)):
+async def api_get_tax_rates(user: User = Depends(check_account_id_exists)):
     conn = await get_xero_connection(user.id)
     if not conn:
         return []
@@ -255,7 +261,7 @@ async def api_get_tax_rates(user: User = Depends(check_user_exists)):
     response_model=ExtensionSettings,
 )
 async def api_get_settings(
-    user: User = Depends(check_user_exists),
+    user: User = Depends(check_account_id_exists),
 ) -> ExtensionSettings:
     user_id = "admin" if ExtensionSettings.is_admin_only() else user.id
     return await get_settings(user_id)
