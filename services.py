@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from typing import TypedDict
 
 import httpx
@@ -371,7 +371,7 @@ async def payment_received_for_client_data(payment: Payment, conn, wallet_cfg) -
     return False
 
 
-async def sync_wallet_payments(wallet_cfg: Wallets) -> SyncSummary:
+async def sync_wallet_payments(wallet_cfg: Wallets, start_date: date | None = None) -> SyncSummary:
     """
     Push all current successful incoming payments for a wallet to Xero.
     """
@@ -387,12 +387,17 @@ async def sync_wallet_payments(wallet_cfg: Wallets) -> SyncSummary:
 
     page_size = 1000
     offset = 0
+    since = None
+    if start_date:
+        start_datetime = datetime.combine(start_date, time.min, tzinfo=timezone.utc)
+        since = int(start_datetime.timestamp()) - 1
     while True:
         filters = Filters(limit=page_size, offset=offset, sortby="time", direction="asc")
         page = await get_payments_paginated(
             wallet_id=wallet_cfg.wallet,
             incoming=True,
             complete=True,
+            since=since,
             filters=filters,
         )
         if not page.data:
@@ -429,8 +434,9 @@ async def sync_wallet_payments(wallet_cfg: Wallets) -> SyncSummary:
 
     now = datetime.now(timezone.utc)
     wallet_cfg.last_synced = now
+    start_note = f" from {start_date.isoformat()}" if start_date else ""
     wallet_cfg.status = (
-        f"Synced {summary['pushed']} (skipped {summary['skipped']}, "
+        f"Synced {summary['pushed']}{start_note} (skipped {summary['skipped']}, "
         f"errors {summary['failed']}) at {now.isoformat()}"
     )
     await update_wallets(wallet_cfg)

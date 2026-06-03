@@ -32,6 +32,12 @@ window.app = Vue.createApp({
           notes: null
         }
       },
+      syncWalletDialog: {
+        show: false,
+        loading: false,
+        wallet: null,
+        startDate: null
+      },
       walletsList: [],
       taxRateList: [
         {value: null, label: 'Use Xero default for this account'},
@@ -253,24 +259,31 @@ window.app = Vue.createApp({
           }
         })
     },
-    async syncWallet(wallet) {
-      await LNbits.utils
-        .confirmDialog(
-          'Push all current successful incoming payments for this wallet to Xero?'
+    showSyncWalletDialog(wallet) {
+      this.syncWalletDialog.wallet = wallet
+      this.syncWalletDialog.startDate = null
+      this.syncWalletDialog.show = true
+    },
+    async syncWallet() {
+      const wallet = this.syncWalletDialog.wallet
+      const startDate = this.syncWalletDialog.startDate
+      if (!wallet || !startDate) return
+
+      try {
+        this.syncWalletDialog.loading = true
+        const {data} = await LNbits.api.request(
+          'POST',
+          `/xerosync/api/v1/wallets/${wallet.id}/push?start_date=${encodeURIComponent(startDate)}`,
+          null
         )
-        .onOk(async () => {
-          try {
-            const {data} = await LNbits.api.request(
-              'POST',
-              `/xerosync/api/v1/wallets/${wallet.id}/push`,
-              null
-            )
-            LNbits.utils.notifySuccess(data.message || 'Wallet pushed to Xero')
-            await this.getWallets()
-          } catch (error) {
-            LNbits.utils.notifyApiError(error)
-          }
-        })
+        LNbits.utils.notifySuccess(data.message || 'Wallet pushed to Xero')
+        this.syncWalletDialog.show = false
+        await this.getWallets()
+      } catch (error) {
+        LNbits.utils.notifyApiError(error)
+      } finally {
+        this.syncWalletDialog.loading = false
+      }
     },
     async exportWalletsCSV() {
       await LNbits.utils.exportCSV(

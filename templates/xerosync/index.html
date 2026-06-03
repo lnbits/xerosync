@@ -129,7 +129,7 @@
                   flat
                   dense
                   size="xs"
-                  @click="syncWallet(props.row)"
+                  @click="showSyncWalletDialog(props.row)"
                   icon="cloud_upload"
                   color="primary"
                   class="q-mr-sm"
@@ -414,6 +414,30 @@
         <q-btn @click="saveWallets" unelevated color="primary">
           <span v-if="walletsFormDialog.data.id">Update</span>
           <span v-else>Create</span>
+        </q-btn>
+        <q-btn v-close-popup flat color="grey" class="q-ml-auto">Cancel</q-btn>
+      </div>
+    </q-card>
+  </q-dialog>
+
+  <q-dialog v-model="syncWalletDialog.show" position="top">
+    <q-card
+      v-if="syncWalletDialog.show"
+      class="q-pa-lg q-pt-md lnbits__dialog-card q-col-gutter-md"
+    >
+      <span class="text-h5">Push Payments</span>
+
+      <q-date v-model="syncWalletDialog.startDate" mask="YYYY-MM-DD"></q-date>
+
+      <div class="row q-mt-lg">
+        <q-btn
+          @click="syncWallet"
+          :disable="!syncWalletDialog.startDate || syncWalletDialog.loading"
+          :loading="syncWalletDialog.loading"
+          unelevated
+          color="primary"
+        >
+          Push payments
         </q-btn>
         <q-btn v-close-popup flat color="grey" class="q-ml-auto">Cancel</q-btn>
       </div>
