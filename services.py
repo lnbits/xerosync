@@ -218,8 +218,6 @@ def _payment_is_fiat(payment: Payment) -> bool:
         return True
     if extra.get("paid_in_fiat"):
         return True
-    if extra.get("fiat_method"):
-        return True
     if extra.get("fiat_payment_request"):
         return True
     return False
