@@ -152,6 +152,7 @@ def _build_bank_transaction_payload(
     elif tr == "exempt":
         tax_type = settings.xero_tax_exempt
 
+    payment_date = _as_datetime(getattr(payment, "time", None))
     bank_tx = {
         "Type": "RECEIVE",
         "Contact": {
@@ -171,7 +172,7 @@ def _build_bank_transaction_payload(
         ],
         "Reference": description,
         "CurrencyCode": fiat_currency.upper(),
-        "Date": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S"),
+        "Date": payment_date.strftime("%Y-%m-%dT%H:%M:%S"),
     }
     if wallet_cfg.auto_reconcile:
         bank_tx["IsReconciled"] = True
