@@ -2,9 +2,11 @@ from datetime import date, datetime, time, timedelta, timezone
 from typing import TypedDict
 
 import httpx
-from lnbits.core.crud import get_payments_paginated
+from lnbits.core.crud import get_payments_paginated, get_wallet
 from lnbits.core.models import Payment
 from lnbits.db import Filters
+from lnbits.settings import settings as lnbits_settings
+from lnbits.utils.exchange_rates import satoshis_amount_as_fiat
 from loguru import logger
 
 from .crud import (
@@ -113,7 +115,28 @@ async def ensure_xero_access_token(conn, settings: ExtensionSettings) -> tuple[s
     return conn.access_token, conn.tenant_id
 
 
-def _build_bank_transaction_payload(
+async def _get_fiat_amount_for_payment(payment: Payment, wallet_cfg: Wallets) -> tuple[str | None, float | None]:
+    extra = payment.extra or {}
+    fiat_currency = extra.get("wallet_fiat_currency") or extra.get("fiat_currency")
+    fiat_amount = extra.get("wallet_fiat_amount")
+    if fiat_amount is None:
+        fiat_amount = extra.get("fiat_amount")
+
+    if fiat_currency and fiat_amount is not None:
+        return fiat_currency, float(fiat_amount)
+
+    wallet = await get_wallet(wallet_cfg.wallet)
+    fallback_currency = (
+        (wallet.currency if wallet else None) or fiat_currency or lnbits_settings.lnbits_default_accounting_currency
+    )
+    if not fallback_currency:
+        return fiat_currency, None
+
+    amount_sats = payment.amount / 1000
+    return fallback_currency, await satoshis_amount_as_fiat(amount_sats, fallback_currency)
+
+
+async def _build_bank_transaction_payload(
     payment: Payment, wallet_cfg: Wallets, settings: ExtensionSettings
 ) -> tuple[dict | None, float | None, str | None, str | None]:
     """
@@ -123,14 +146,14 @@ def _build_bank_transaction_payload(
     if payment.amount <= 0:
         return None, None, None, "payment is not incoming"
 
-    extra = payment.extra or {}
-    fiat_currency = extra.get("wallet_fiat_currency") or extra.get("fiat_currency")
-    fiat_amount = extra.get("wallet_fiat_amount")
-    if fiat_amount is None:
-        fiat_amount = extra.get("fiat_amount")
+    try:
+        fiat_currency, fiat_amount = await _get_fiat_amount_for_payment(payment, wallet_cfg)
+    except Exception as exc:
+        logger.warning(f"Xero Sync: failed to calculate fiat amount for " f"{payment.payment_hash}: {exc}")
+        return None, None, None, "missing fiat currency/amount"
 
     if not fiat_currency or fiat_amount is None:
-        return None, None, None, "missing fiat currency/amount"
+        return None, None, fiat_currency, "missing fiat currency/amount"
 
     if not wallet_cfg.xero_bank_account_id or wallet_cfg.xero_bank_account_id == EMPTY_ACCOUNT_ID:
         return None, None, None, "wallet missing xero_bank_account_id"
@@ -304,7 +327,9 @@ async def push_payment_to_xero(
     if _should_skip_by_payment_type(payment, wallet_cfg):
         return {"status": "skip", "reason": "payment type disabled"}
 
-    bank_tx, amount_major, fiat_currency, skip_reason = _build_bank_transaction_payload(payment, wallet_cfg, settings)
+    bank_tx, amount_major, fiat_currency, skip_reason = await _build_bank_transaction_payload(
+        payment, wallet_cfg, settings
+    )
     if skip_reason:
         logger.debug(f"Xero Sync: skipping payment {payment.payment_hash} ({skip_reason})")
         return {"status": "skip", "reason": skip_reason}
