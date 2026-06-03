@@ -124,8 +124,10 @@ def _build_bank_transaction_payload(
         return None, None, None, "payment is not incoming"
 
     extra = payment.extra or {}
-    fiat_currency = extra.get("wallet_fiat_currency")
+    fiat_currency = extra.get("wallet_fiat_currency") or extra.get("fiat_currency")
     fiat_amount = extra.get("wallet_fiat_amount")
+    if fiat_amount is None:
+        fiat_amount = extra.get("fiat_amount")
 
     if not fiat_currency or fiat_amount is None:
         return None, None, None, "missing fiat currency/amount"
