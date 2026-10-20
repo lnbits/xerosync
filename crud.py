@@ -19,7 +19,7 @@ db = Database("ext_xerosync")
 
 ########################### Wallets ############################
 async def create_wallets(user_id: str, data: CreateWallets) -> Wallets:
-    wallets = Wallets(**data.dict(), id=urlsafe_short_hash(), user_id=user_id)
+    wallets = Wallets(**data.model_dump(), id=urlsafe_short_hash(), user_id=user_id)
     await db.insert("xerosync.wallets", wallets)
     return wallets
 
@@ -113,7 +113,7 @@ async def delete_wallets(user_id: str, wallets_id: str) -> None:
 
 ############################ Settings #############################
 async def create_extension_settings(user_id: str, data: ExtensionSettings) -> ExtensionSettings:
-    settings = UserExtensionSettings(**data.dict(), id=user_id)
+    settings = UserExtensionSettings(**data.model_dump(), id=user_id)
     await db.insert("xerosync.extension_settings", settings)
     return settings
 
@@ -132,7 +132,7 @@ async def get_extension_settings(
 
 
 async def update_extension_settings(user_id: str, data: ExtensionSettings) -> ExtensionSettings:
-    settings = UserExtensionSettings(**data.dict(), id=user_id)
+    settings = UserExtensionSettings(**data.model_dump(), id=user_id)
     await db.update("xerosync.extension_settings", settings)
     return settings
 
@@ -141,7 +141,7 @@ async def update_extension_settings(user_id: str, data: ExtensionSettings) -> Ex
 async def create_xero_connection(user_id: str, data: CreateXeroConnection) -> XeroConnection:
     now = datetime.now(timezone.utc)
     conn = XeroConnection(
-        **data.dict(),
+        **data.model_dump(),
         id=urlsafe_short_hash(),
         user_id=user_id,
         created_at=now,
@@ -184,7 +184,7 @@ async def upsert_xero_connection(
     existing = await get_xero_connection(user_id)
 
     if existing:
-        updated = existing.copy(update=data.dict())
+        updated = existing.model_copy(update=data.model_dump())
         return await update_xero_connection(updated)
 
     return await create_xero_connection(user_id, data)
