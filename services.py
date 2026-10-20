@@ -1,9 +1,9 @@
 from datetime import date, datetime, time, timedelta, timezone
-from typing import TypedDict
+from typing import Any, TypedDict
 
 import httpx
 from lnbits.core.crud import get_payments_paginated, get_wallet
-from lnbits.core.models import Payment
+from lnbits.core.models import Payment, PaymentFilters
 from lnbits.db import Filters
 from lnbits.settings import settings as lnbits_settings
 from lnbits.utils.exchange_rates import satoshis_amount_as_fiat
@@ -176,7 +176,7 @@ async def _build_bank_transaction_payload(
         tax_type = settings.xero_tax_exempt
 
     payment_date = _as_datetime(getattr(payment, "time", None))
-    bank_tx = {
+    bank_tx: dict[str, Any] = {
         "Type": "RECEIVE",
         "Contact": {
             "Name": wallet_cfg.reconcile_name or "LNbits Customer",
@@ -418,7 +418,7 @@ async def sync_wallet_payments(wallet_cfg: Wallets, start_date: date | None = No
         start_datetime = datetime.combine(start_date, time.min, tzinfo=timezone.utc)
         since = int(start_datetime.timestamp()) - 1
     while True:
-        filters = Filters(limit=page_size, offset=offset, sortby="time", direction="asc")
+        filters = Filters[PaymentFilters](limit=page_size, offset=offset, sortby="time", direction="asc")
         page = await get_payments_paginated(
             wallet_id=wallet_cfg.wallet,
             incoming=True,

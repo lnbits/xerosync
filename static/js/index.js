@@ -250,7 +250,9 @@ window.app = Vue.createApp({
           try {
             await LNbits.api.request(
               'DELETE',
-              '/xerosync/api/v1/wallets/' + walletsId + '?clear_client_data=true',
+              '/xerosync/api/v1/wallets/' +
+                walletsId +
+                '?clear_client_data=true',
               null
             )
             await this.getWallets()
@@ -276,7 +278,10 @@ window.app = Vue.createApp({
           `/xerosync/api/v1/wallets/${wallet.id}/push?start_date=${encodeURIComponent(startDate)}`,
           null
         )
-        LNbits.utils.notifySuccess(data.message || 'Wallet pushed to Xero')
+        this.$q.notify({
+          type: 'positive',
+          message: data.message || 'Wallet pushed to Xero'
+        })
         this.syncWalletDialog.show = false
         await this.getWallets()
       } catch (error) {
@@ -306,9 +311,11 @@ window.app = Vue.createApp({
         this.accountCodeList = data
       } catch (error) {
         // User may not have connected to Xero yet; fail soft
-        LNbits.utils.notifyError(
-          'Could not load Xero accounts. Connect to Xero and try again.'
-        )
+        this.$q.notify({
+          type: 'negative',
+          message:
+            'Could not load Xero accounts. Connect to Xero and try again.'
+        })
         this.accountCodeList = []
       }
     },
@@ -320,9 +327,11 @@ window.app = Vue.createApp({
         )
         this.bankAccountList = data
       } catch (error) {
-        LNbits.utils.notifyError(
-          'Could not load Xero bank accounts. Connect to Xero and try again.'
-        )
+        this.$q.notify({
+          type: 'negative',
+          message:
+            'Could not load Xero bank accounts. Connect to Xero and try again.'
+        })
         this.bankAccountList = []
       }
     },
@@ -334,9 +343,11 @@ window.app = Vue.createApp({
         )
         this.taxTypeList = data
       } catch (error) {
-        LNbits.utils.notifyError(
-          'Could not load Xero tax rates. Connect to Xero and try again.'
-        )
+        this.$q.notify({
+          type: 'negative',
+          message:
+            'Could not load Xero tax rates. Connect to Xero and try again.'
+        })
         this.taxTypeList = []
       }
     },
