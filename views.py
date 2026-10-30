@@ -23,7 +23,7 @@ def xerosync_renderer():
 
 @xerosync_generic_router.get("/", response_class=HTMLResponse)
 async def index(req: Request, user: User = Depends(check_user_exists)):
-    return xerosync_renderer().TemplateResponse("xerosync/index.html", {"request": req, "user": user.json()})
+    return xerosync_renderer().TemplateResponse("xerosync/index.html", {"request": req, "user": user.model_dump_json()})
 
 
 @xerosync_generic_router.get("/oauth/start")

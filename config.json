@@ -2,8 +2,8 @@
   "name": "XeroSync",
   "short_description": "LNbits -> Xero wallet sync",
   "tile": "/xerosync/static/image/xerosync.png",
-  "version": "0.0.7",
-  "min_lnbits_version": "1.4.0",
+  "version": "0.1.0",
+  "min_lnbits_version": "1.7.0-rc1",
   "contributors": [
     {
       "name": "LNbits community",

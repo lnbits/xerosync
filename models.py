@@ -12,14 +12,14 @@ class CreateWallets(BaseModel):
     push_bitcoin: bool = True
     push_fiat: bool = True
     auto_reconcile: bool | None = None
-    reconcile_name: str | None
-    reconcile_mode: str | None
-    xero_bank_account_id: str | None
+    reconcile_name: str | None = None
+    reconcile_mode: str | None = None
+    xero_bank_account_id: str | None = None
     tax_rate: str | None = None
-    fee_handling: bool | None
-    last_synced: datetime | None
-    status: str | None
-    notes: str | None
+    fee_handling: bool | None = None
+    last_synced: datetime | None = None
+    status: str | None = None
+    notes: str | None = None
 
 
 class Wallets(BaseModel):
@@ -31,14 +31,14 @@ class Wallets(BaseModel):
     push_bitcoin: bool = True
     push_fiat: bool = True
     auto_reconcile: bool | None = None
-    reconcile_name: str | None
-    reconcile_mode: str | None
-    xero_bank_account_id: str | None
+    reconcile_name: str | None = None
+    reconcile_mode: str | None = None
+    xero_bank_account_id: str | None = None
     tax_rate: str | None = None
-    fee_handling: bool | None
-    last_synced: datetime | None
-    status: str | None
-    notes: str | None
+    fee_handling: bool | None = None
+    last_synced: datetime | None = None
+    status: str | None = None
+    notes: str | None = None
 
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -81,8 +81,8 @@ class WalletsFilters(FilterModel):
         "updated_at",
     ]
 
-    created_at: datetime | None
-    updated_at: datetime | None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
 
 ############################ Settings #############################
@@ -128,7 +128,7 @@ class SyncedPayment(BaseModel):
     user_id: str
     wallet_id: str
     payment_hash: str
-    xero_bank_transaction_id: str | None
-    currency: str | None
-    amount: float | None
+    xero_bank_transaction_id: str | None = None
+    currency: str | None = None
+    amount: float | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

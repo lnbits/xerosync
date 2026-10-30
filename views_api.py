@@ -3,7 +3,6 @@ from http import HTTPStatus
 
 from fastapi import APIRouter, Depends
 from fastapi.exceptions import HTTPException
-
 from lnbits.core.models import SimpleStatus, User
 from lnbits.db import Filters, Page
 from lnbits.decorators import (
@@ -64,7 +63,7 @@ async def api_update_wallets(
         raise HTTPException(HTTPStatus.NOT_FOUND, "Wallets not found.")
     if wallets.user_id != user.id:
         raise HTTPException(HTTPStatus.FORBIDDEN, "You do not own this wallets.")
-    wallets = await update_wallets(Wallets(**{**wallets.dict(), **data.dict()}))
+    wallets = await update_wallets(Wallets(**{**wallets.model_dump(), **data.model_dump()}))
     return wallets
 
 
